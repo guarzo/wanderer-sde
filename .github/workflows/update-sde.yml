@@ -31,8 +31,11 @@ jobs:
       - name: Check SDE Version
         id: check
         run: |
-          # Fetch latest SDE build number from CCP's API
-          LATEST=$(curl -sf https://developers.eveonline.com/static-data/tranquility/latest.json | jq -r '.sde // empty')
+          # Fetch latest SDE build number from CCP's API (JSON Lines format)
+          # Each line is a separate JSON object, we need the one with _key="sde"
+          LATEST=$(curl -sf https://developers.eveonline.com/static-data/tranquility/latest.jsonl | \
+            grep '"_key":"sde"' | \
+            jq -r '.buildNumber // empty')
 
           if [ -z "$LATEST" ]; then
             echo "Failed to fetch SDE version from CCP API"
