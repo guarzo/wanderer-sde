@@ -102,7 +102,7 @@ jobs:
           fi
 
       - name: Create Pull Request
-        if: steps.diff.outputs.has_changes == 'true'
+        if: steps.diff.outputs.has_changes == 'true' || github.event.inputs.force_pr == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.WANDERER_PAT }}
