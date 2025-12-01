@@ -16,7 +16,7 @@ func TestJSONWriter_WriteAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{
 		OutputDir:   tmpDir,
@@ -109,13 +109,13 @@ func TestJSONWriter_CopyPassthroughFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create src temp dir: %v", err)
 	}
-	defer os.RemoveAll(srcDir)
+	defer func() { _ = os.RemoveAll(srcDir) }()
 
 	dstDir, err := os.MkdirTemp("", "passthrough_dst")
 	if err != nil {
 		t.Fatalf("failed to create dst temp dir: %v", err)
 	}
-	defer os.RemoveAll(dstDir)
+	defer func() { _ = os.RemoveAll(dstDir) }()
 
 	// Create some passthrough files in source
 	testFiles := []string{"wormholes.json", "effects.json"}
@@ -153,7 +153,7 @@ func TestJSONWriter_PrettyPrint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	tests := []struct {
 		name        string
@@ -167,7 +167,7 @@ func TestJSONWriter_PrettyPrint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			outDir := filepath.Join(tmpDir, tt.name)
-			os.MkdirAll(outDir, 0755)
+			_ = os.MkdirAll(outDir, 0755)
 
 			cfg := &config.Config{
 				OutputDir:   outDir,

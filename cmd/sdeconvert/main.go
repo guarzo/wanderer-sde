@@ -147,7 +147,7 @@ func runConversion(cmd *cobra.Command, args []string) error {
 				if err := copyDir(downloadedPath, sdePath); err != nil {
 					return fmt.Errorf("failed to move SDE to %s: %w", sdePath, err)
 				}
-				os.RemoveAll(downloadedPath)
+				_ = os.RemoveAll(downloadedPath)
 			}
 
 			fmt.Printf("SDE downloaded and extracted to: %s\n", sdePath)
@@ -279,13 +279,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer srcFile.Close()
+	defer func() { _ = srcFile.Close() }()
 
 	dstFile, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
+	defer func() { _ = dstFile.Close() }()
 
 	_, err = io.Copy(dstFile, srcFile)
 	return err

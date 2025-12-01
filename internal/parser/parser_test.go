@@ -162,7 +162,7 @@ func createTestSDE(t *testing.T) string {
 
 func TestParser_ParseRegions(t *testing.T) {
 	tmpDir := createTestSDE(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
@@ -194,7 +194,7 @@ func TestParser_ParseRegions(t *testing.T) {
 
 func TestParser_ParseConstellations(t *testing.T) {
 	tmpDir := createTestSDE(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
@@ -225,7 +225,7 @@ func TestParser_ParseConstellations(t *testing.T) {
 
 func TestParser_ParseSolarSystems(t *testing.T) {
 	tmpDir := createTestSDE(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
@@ -279,7 +279,7 @@ func TestParser_ParseSolarSystems(t *testing.T) {
 
 func TestParser_ParseStargates(t *testing.T) {
 	tmpDir := createTestSDE(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
@@ -306,7 +306,7 @@ func TestParser_ParseStargates(t *testing.T) {
 
 func TestParser_ParseTypes(t *testing.T) {
 	tmpDir := createTestSDE(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
@@ -341,7 +341,7 @@ func TestParser_ParseTypes(t *testing.T) {
 
 func TestParser_ParseGroups(t *testing.T) {
 	tmpDir := createTestSDE(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
@@ -372,7 +372,7 @@ func TestParser_ParseGroups(t *testing.T) {
 
 func TestParser_ParseCategories(t *testing.T) {
 	tmpDir := createTestSDE(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
@@ -399,7 +399,7 @@ func TestParser_ParseCategories(t *testing.T) {
 
 func TestParser_ExtractWormholeClasses(t *testing.T) {
 	tmpDir := createTestSDE(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
@@ -432,7 +432,7 @@ func TestParser_ExtractWormholeClasses(t *testing.T) {
 
 func TestParser_ParseAll(t *testing.T) {
 	tmpDir := createTestSDE(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
@@ -471,7 +471,7 @@ func TestParser_MissingFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
@@ -488,7 +488,7 @@ func TestParser_MalformedYAML(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create malformed YAML
 	malformedYAML := `this is not valid yaml: [[[`
@@ -510,7 +510,7 @@ func TestParser_EmptyName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create region with empty name
 	regionsYAML := `10000001:

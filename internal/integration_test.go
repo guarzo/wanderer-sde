@@ -281,14 +281,14 @@ func createTestSDE(t *testing.T) string {
 func TestIntegration_FullPipeline(t *testing.T) {
 	// Create test SDE
 	sdeDir := createTestSDE(t)
-	defer os.RemoveAll(sdeDir)
+	defer func() { _ = os.RemoveAll(sdeDir) }()
 
 	// Create output directory
 	outputDir, err := os.MkdirTemp("", "integration_output")
 	if err != nil {
 		t.Fatalf("failed to create output dir: %v", err)
 	}
-	defer os.RemoveAll(outputDir)
+	defer func() { _ = os.RemoveAll(outputDir) }()
 
 	cfg := &config.Config{
 		SDEPath:     sdeDir,
@@ -425,14 +425,14 @@ func TestIntegration_PassthroughFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create src dir: %v", err)
 	}
-	defer os.RemoveAll(srcDir)
+	defer func() { _ = os.RemoveAll(srcDir) }()
 
 	// Create output directory
 	outputDir, err := os.MkdirTemp("", "passthrough_dst")
 	if err != nil {
 		t.Fatalf("failed to create output dir: %v", err)
 	}
-	defer os.RemoveAll(outputDir)
+	defer func() { _ = os.RemoveAll(outputDir) }()
 
 	// Create passthrough files
 	passthroughFiles := []string{
@@ -471,7 +471,7 @@ func TestIntegration_PassthroughFiles(t *testing.T) {
 
 func TestIntegration_SortingConsistency(t *testing.T) {
 	sdeDir := createTestSDE(t)
-	defer os.RemoveAll(sdeDir)
+	defer func() { _ = os.RemoveAll(sdeDir) }()
 
 	cfg := &config.Config{
 		SDEPath: sdeDir,
@@ -560,7 +560,7 @@ func TestIntegration_SortingConsistency(t *testing.T) {
 
 func TestIntegration_DataIntegrity(t *testing.T) {
 	sdeDir := createTestSDE(t)
-	defer os.RemoveAll(sdeDir)
+	defer func() { _ = os.RemoveAll(sdeDir) }()
 
 	cfg := &config.Config{
 		SDEPath: sdeDir,

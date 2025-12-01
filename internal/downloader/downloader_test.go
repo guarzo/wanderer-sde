@@ -18,7 +18,7 @@ func TestDownloader_Validate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create all expected files
 	for _, filename := range ExpectedFiles {
@@ -36,7 +36,7 @@ func TestDownloader_Validate(t *testing.T) {
 	}
 
 	// Test missing file
-	os.Remove(filepath.Join(tmpDir, "types.yaml"))
+	_ = os.Remove(filepath.Join(tmpDir, "types.yaml"))
 	if err := dl.Validate(tmpDir); err == nil {
 		t.Error("Expected error for missing file")
 	}
@@ -48,7 +48,7 @@ func TestDownloader_Extract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	zipPath := filepath.Join(tmpDir, "test.zip")
 	extractDir := filepath.Join(tmpDir, "extracted")
@@ -63,14 +63,14 @@ func TestDownloader_Extract(t *testing.T) {
 
 	// Add some files to the ZIP
 	testFiles := map[string]string{
-		"types.yaml":          "type: test",
-		"groups.yaml":         "group: test",
-		"categories.yaml":     "category: test",
-		"mapSolarSystems.yaml": "system: test",
-		"mapRegions.yaml":     "region: test",
+		"types.yaml":             "type: test",
+		"groups.yaml":            "group: test",
+		"categories.yaml":        "category: test",
+		"mapSolarSystems.yaml":   "system: test",
+		"mapRegions.yaml":        "region: test",
 		"mapConstellations.yaml": "constellation: test",
-		"mapStargates.yaml":   "stargate: test",
-		"subdir/nested.yaml":  "nested: test",
+		"mapStargates.yaml":      "stargate: test",
+		"subdir/nested.yaml":     "nested: test",
 	}
 
 	for name, content := range testFiles {
@@ -86,7 +86,7 @@ func TestDownloader_Extract(t *testing.T) {
 	if err := zipWriter.Close(); err != nil {
 		t.Fatalf("failed to close zip writer: %v", err)
 	}
-	zipFile.Close()
+	_ = zipFile.Close()
 
 	cfg := &config.Config{Verbose: false}
 	dl := New(cfg)
@@ -112,7 +112,7 @@ func TestDownloader_ExtractZipSlipProtection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	zipPath := filepath.Join(tmpDir, "malicious.zip")
 	extractDir := filepath.Join(tmpDir, "extracted")
@@ -137,7 +137,7 @@ func TestDownloader_ExtractZipSlipProtection(t *testing.T) {
 	if err := zipWriter.Close(); err != nil {
 		t.Fatalf("failed to close zip writer: %v", err)
 	}
-	zipFile.Close()
+	_ = zipFile.Close()
 
 	cfg := &config.Config{Verbose: false}
 	dl := New(cfg)
@@ -155,7 +155,7 @@ func TestDownloader_Download(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", string(rune(len(testContent))))
 		w.WriteHeader(http.StatusOK)
-		w.Write(testContent)
+		_, _ = w.Write(testContent)
 	}))
 	defer server.Close()
 
@@ -172,7 +172,7 @@ func TestDownloader_Download(t *testing.T) {
 	}
 
 	// Clean up downloaded file
-	defer os.RemoveAll(filepath.Dir(result.ZipPath))
+	defer func() { _ = os.RemoveAll(filepath.Dir(result.ZipPath)) }()
 
 	// Verify file was downloaded
 	if _, err := os.Stat(result.ZipPath); os.IsNotExist(err) {
@@ -219,7 +219,7 @@ func TestDownloader_DownloadContextCancellation(t *testing.T) {
 			return
 		default:
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("test"))
+			_, _ = w.Write([]byte("test"))
 		}
 	}))
 	defer server.Close()

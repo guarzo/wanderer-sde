@@ -25,14 +25,14 @@ func New(cfg *config.Config, sdePath string) *Parser {
 
 // ParseResult contains all parsed data from the SDE.
 type ParseResult struct {
-	Regions        []models.Region
-	Constellations []models.Constellation
-	SolarSystems   []models.SolarSystem
-	Types          map[int64]models.SDEType
-	Groups         map[int64]models.SDEGroup
-	Categories     map[int64]models.SDECategory
+	Regions         []models.Region
+	Constellations  []models.Constellation
+	SolarSystems    []models.SolarSystem
+	Types           map[int64]models.SDEType
+	Groups          map[int64]models.SDEGroup
+	Categories      map[int64]models.SDECategory
 	WormholeClasses []models.WormholeClassLocation
-	SystemJumps    []models.SystemJump
+	SystemJumps     []models.SystemJump
 }
 
 // ParseAll parses all SDE files and returns the combined result.

@@ -71,7 +71,7 @@ func (d *Downloader) Download(ctx context.Context) (*DownloadResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output file: %w", err)
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	// Create the HTTP request with context
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, d.config.SDEUrl, nil)
@@ -88,7 +88,7 @@ func (d *Downloader) Download(ctx context.Context) (*DownloadResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to download SDE: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -133,7 +133,7 @@ func (d *Downloader) Extract(zipPath, destDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to open ZIP file: %w", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	// Create destination directory
 	if err := os.MkdirAll(destDir, 0755); err != nil {
@@ -186,14 +186,14 @@ func (d *Downloader) extractFile(f *zip.File, destDir string) error {
 	if err != nil {
 		return err
 	}
-	defer outFile.Close()
+	defer func() { _ = outFile.Close() }()
 
 	// Open the file in the archive
 	rc, err := f.Open()
 	if err != nil {
 		return err
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	// Copy contents
 	_, err = io.Copy(outFile, rc)

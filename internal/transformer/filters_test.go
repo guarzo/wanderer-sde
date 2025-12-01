@@ -15,9 +15,9 @@ func TestFilterShipTypes(t *testing.T) {
 	}
 
 	types := map[int64]models.SDEType{
-		587: {GroupID: 25, Name: map[string]string{"en": "Rifter"}, Mass: 1350000, Volume: 27500},
-		588: {GroupID: 25, Name: map[string]string{"en": "Slasher"}, Mass: 1200000, Volume: 26000},
-		625: {GroupID: 26, Name: map[string]string{"en": "Caracal"}, Mass: 11000000, Volume: 92000},
+		587:  {GroupID: 25, Name: map[string]string{"en": "Rifter"}, Mass: 1350000, Volume: 27500},
+		588:  {GroupID: 25, Name: map[string]string{"en": "Slasher"}, Mass: 1200000, Volume: 26000},
+		625:  {GroupID: 26, Name: map[string]string{"en": "Caracal"}, Mass: 11000000, Volume: 92000},
 		2456: {GroupID: 18, Name: map[string]string{"en": "Hobgoblin I"}, Mass: 2500, Volume: 5}, // Drone, not a ship
 	}
 

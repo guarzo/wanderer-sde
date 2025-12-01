@@ -39,8 +39,8 @@ func TestTransformer_Transform(t *testing.T) {
 			},
 		},
 		Types: map[int64]models.SDEType{
-			587: {GroupID: 25, Name: map[string]string{"en": "Rifter"}, Mass: 1350000, Volume: 27500, Published: true},
-			588: {GroupID: 25, Name: map[string]string{"en": "Slasher"}, Mass: 1200000, Volume: 26000, Published: true},
+			587:  {GroupID: 25, Name: map[string]string{"en": "Rifter"}, Mass: 1350000, Volume: 27500, Published: true},
+			588:  {GroupID: 25, Name: map[string]string{"en": "Slasher"}, Mass: 1200000, Volume: 26000, Published: true},
 			2456: {GroupID: 18, Name: map[string]string{"en": "Hobgoblin I"}, Mass: 2500, Volume: 5, Published: true},
 		},
 		Groups: map[int64]models.SDEGroup{

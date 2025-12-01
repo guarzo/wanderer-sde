@@ -13,7 +13,7 @@ func TestParseFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	yamlContent := `name: "test"
 value: 42
@@ -63,7 +63,7 @@ func TestParseFile_MalformedYAML(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create malformed YAML
 	yamlPath := filepath.Join(tmpDir, "malformed.yaml")
@@ -107,7 +107,7 @@ func TestParseFileMap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create YAML with map structure (like typeIDs.yaml)
 	yamlContent := `587:
@@ -164,7 +164,7 @@ func TestParseFileMap_MalformedYAML(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	yamlPath := filepath.Join(tmpDir, "malformed.yaml")
 	if err := os.WriteFile(yamlPath, []byte("[[invalid yaml:"), 0644); err != nil {
@@ -186,7 +186,7 @@ func TestParseFileMap_EmptyFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create empty YAML file
 	yamlPath := filepath.Join(tmpDir, "empty.yaml")
@@ -210,7 +210,7 @@ func TestParseFileMap_StringKeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	yamlContent := `region_a:
   name: "Region A"
@@ -249,7 +249,7 @@ func TestParseFileMap_NestedStructs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	yamlContent := `1:
   name:

@@ -31,12 +31,12 @@ type WormholeClassLocation struct {
 
 // ShipType represents a ship type in Wanderer's format.
 type ShipType struct {
-	TypeID    int64   `json:"typeID"`
-	GroupID   int64   `json:"groupID"`
-	TypeName  string  `json:"typeName"`
-	Mass      float64 `json:"mass,omitempty"`
-	Volume    float64 `json:"volume,omitempty"`
-	Capacity  float64 `json:"capacity,omitempty"`
+	TypeID   int64   `json:"typeID"`
+	GroupID  int64   `json:"groupID"`
+	TypeName string  `json:"typeName"`
+	Mass     float64 `json:"mass,omitempty"`
+	Volume   float64 `json:"volume,omitempty"`
+	Capacity float64 `json:"capacity,omitempty"`
 }
 
 // ItemGroup represents an item group in Wanderer's format.
@@ -61,24 +61,24 @@ type UniverseData struct {
 
 // ConvertedData holds all data ready for output.
 type ConvertedData struct {
-	Universe       *UniverseData
-	ShipTypes      []ShipType
-	ItemGroups     []ItemGroup
+	Universe        *UniverseData
+	ShipTypes       []ShipType
+	ItemGroups      []ItemGroup
 	WormholeClasses []WormholeClassLocation
-	SystemJumps    []SystemJump
+	SystemJumps     []SystemJump
 }
 
 // ValidationResult holds the results of data validation.
 type ValidationResult struct {
-	SolarSystems   int
-	Regions        int
-	Constellations int
-	ShipTypes      int
-	ItemGroups     int
-	SystemJumps    int
+	SolarSystems    int
+	Regions         int
+	Constellations  int
+	ShipTypes       int
+	ItemGroups      int
+	SystemJumps     int
 	WormholeClasses int
-	Errors         []string
-	Warnings       []string
+	Errors          []string
+	Warnings        []string
 }
 
 // IsValid returns true if validation found no errors.

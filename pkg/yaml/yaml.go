@@ -15,7 +15,7 @@ func ParseFile(path string, target interface{}) error {
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	return Parse(f, target)
 }
@@ -36,7 +36,7 @@ func ParseFileMap[K comparable, V any](path string) (map[K]V, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var result map[K]V
 	decoder := yaml.NewDecoder(f)

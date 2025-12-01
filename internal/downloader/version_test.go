@@ -16,7 +16,7 @@ func TestVersionChecker_GetStoredVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	vc := NewVersionChecker(cfg)
@@ -51,7 +51,7 @@ func TestVersionChecker_StoreVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	vc := NewVersionChecker(cfg)
@@ -83,7 +83,7 @@ func TestVersionChecker_GetLatestVersion(t *testing.T) {
 		w.Header().Set("Content-Type", "application/x-ndjson")
 		w.Header().Set("ETag", "\"test-etag\"")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(jsonlResponse))
+		_, _ = w.Write([]byte(jsonlResponse))
 	}))
 	defer server.Close()
 
@@ -104,7 +104,7 @@ func TestVersionChecker_GetLatestVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("unexpected status code: %d", resp.StatusCode)
@@ -116,7 +116,7 @@ func TestVersionChecker_NeedsUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create a test server
 	jsonlResponse := `{"_key":"sde","buildNumber":2025002}
@@ -124,7 +124,7 @@ func TestVersionChecker_NeedsUpdate(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/x-ndjson")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(jsonlResponse))
+		_, _ = w.Write([]byte(jsonlResponse))
 	}))
 	defer server.Close()
 
@@ -225,7 +225,7 @@ func TestVersionChecker_CheckETag(t *testing.T) {
 				}
 				return
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 
 			// Verify status code handling
 			if tt.expectError && resp.StatusCode != http.StatusInternalServerError {

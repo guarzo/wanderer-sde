@@ -67,7 +67,7 @@ func (vc *VersionChecker) GetLatestVersion(ctx context.Context) (*VersionInfo, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch latest version: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -189,7 +189,7 @@ func (vc *VersionChecker) CheckETag(ctx context.Context, storedETag string) (boo
 	if err != nil {
 		return false, "", fmt.Errorf("failed to check ETag: %w", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	currentETag := resp.Header.Get("ETag")
 

@@ -3,14 +3,14 @@ package models
 
 // SDERegion represents a region from the SDE universe files.
 type SDERegion struct {
-	RegionID    int64   `yaml:"regionID"`
-	Center      []float64 `yaml:"center,omitempty"`
-	Max         []float64 `yaml:"max,omitempty"`
-	Min         []float64 `yaml:"min,omitempty"`
-	NameID      int64   `yaml:"nameID,omitempty"`
-	DescriptionID int64 `yaml:"descriptionID,omitempty"`
-	FactionID   int64   `yaml:"factionID,omitempty"`
-	Wormhole    *SDEWormholeInfo `yaml:"wormholeClassID,omitempty"`
+	RegionID      int64            `yaml:"regionID"`
+	Center        []float64        `yaml:"center,omitempty"`
+	Max           []float64        `yaml:"max,omitempty"`
+	Min           []float64        `yaml:"min,omitempty"`
+	NameID        int64            `yaml:"nameID,omitempty"`
+	DescriptionID int64            `yaml:"descriptionID,omitempty"`
+	FactionID     int64            `yaml:"factionID,omitempty"`
+	Wormhole      *SDEWormholeInfo `yaml:"wormholeClassID,omitempty"`
 }
 
 // SDEWormholeInfo represents wormhole class information embedded in region/system data.
@@ -20,56 +20,56 @@ type SDEWormholeInfo struct {
 
 // SDEConstellation represents a constellation from the SDE universe files.
 type SDEConstellation struct {
-	ConstellationID int64   `yaml:"constellationID"`
+	ConstellationID int64     `yaml:"constellationID"`
 	Center          []float64 `yaml:"center,omitempty"`
 	Max             []float64 `yaml:"max,omitempty"`
 	Min             []float64 `yaml:"min,omitempty"`
-	NameID          int64   `yaml:"nameID,omitempty"`
-	FactionID       int64   `yaml:"factionID,omitempty"`
-	Radius          float64 `yaml:"radius,omitempty"`
+	NameID          int64     `yaml:"nameID,omitempty"`
+	FactionID       int64     `yaml:"factionID,omitempty"`
+	Radius          float64   `yaml:"radius,omitempty"`
 }
 
 // SDESolarSystem represents a solar system from the SDE universe files.
 type SDESolarSystem struct {
-	SolarSystemID   int64              `yaml:"solarSystemID"`
-	Security        float64            `yaml:"security"`
-	SecurityClass   string             `yaml:"securityClass,omitempty"`
-	Center          []float64          `yaml:"center,omitempty"`
-	Max             []float64          `yaml:"max,omitempty"`
-	Min             []float64          `yaml:"min,omitempty"`
-	Border          bool               `yaml:"border,omitempty"`
-	Corridor        bool               `yaml:"corridor,omitempty"`
-	FactionID       int64              `yaml:"factionID,omitempty"`
-	Fringe          bool               `yaml:"fringe,omitempty"`
-	Hub             bool               `yaml:"hub,omitempty"`
-	International   bool               `yaml:"international,omitempty"`
-	Luminosity      float64            `yaml:"luminosity,omitempty"`
-	Radius          float64            `yaml:"radius,omitempty"`
-	Regional        bool               `yaml:"regional,omitempty"`
-	Star            *SDEStar           `yaml:"star,omitempty"`
+	SolarSystemID   int64                 `yaml:"solarSystemID"`
+	Security        float64               `yaml:"security"`
+	SecurityClass   string                `yaml:"securityClass,omitempty"`
+	Center          []float64             `yaml:"center,omitempty"`
+	Max             []float64             `yaml:"max,omitempty"`
+	Min             []float64             `yaml:"min,omitempty"`
+	Border          bool                  `yaml:"border,omitempty"`
+	Corridor        bool                  `yaml:"corridor,omitempty"`
+	FactionID       int64                 `yaml:"factionID,omitempty"`
+	Fringe          bool                  `yaml:"fringe,omitempty"`
+	Hub             bool                  `yaml:"hub,omitempty"`
+	International   bool                  `yaml:"international,omitempty"`
+	Luminosity      float64               `yaml:"luminosity,omitempty"`
+	Radius          float64               `yaml:"radius,omitempty"`
+	Regional        bool                  `yaml:"regional,omitempty"`
+	Star            *SDEStar              `yaml:"star,omitempty"`
 	Stargates       map[int64]SDEStargate `yaml:"stargates,omitempty"`
 	Planets         map[int64]SDEPlanet   `yaml:"planets,omitempty"`
-	SunTypeID       int64              `yaml:"sunTypeID,omitempty"`
-	WormholeClassID int64              `yaml:"wormholeClassID,omitempty"`
+	SunTypeID       int64                 `yaml:"sunTypeID,omitempty"`
+	WormholeClassID int64                 `yaml:"wormholeClassID,omitempty"`
 }
 
 // SDEStar represents star data within a solar system.
 type SDEStar struct {
-	ID       int64   `yaml:"id"`
-	Radius   float64 `yaml:"radius,omitempty"`
-	TypeID   int64   `yaml:"typeID"`
+	ID         int64              `yaml:"id"`
+	Radius     float64            `yaml:"radius,omitempty"`
+	TypeID     int64              `yaml:"typeID"`
 	Statistics *SDEStarStatistics `yaml:"statistics,omitempty"`
 }
 
 // SDEStarStatistics holds statistical data about a star.
 type SDEStarStatistics struct {
-	Age          float64 `yaml:"age,omitempty"`
-	Life         float64 `yaml:"life,omitempty"`
-	Locked       bool    `yaml:"locked,omitempty"`
-	Luminosity   float64 `yaml:"luminosity,omitempty"`
-	Radius       float64 `yaml:"radius,omitempty"`
-	SpectralClass string `yaml:"spectralClass,omitempty"`
-	Temperature  float64 `yaml:"temperature,omitempty"`
+	Age           float64 `yaml:"age,omitempty"`
+	Life          float64 `yaml:"life,omitempty"`
+	Locked        bool    `yaml:"locked,omitempty"`
+	Luminosity    float64 `yaml:"luminosity,omitempty"`
+	Radius        float64 `yaml:"radius,omitempty"`
+	SpectralClass string  `yaml:"spectralClass,omitempty"`
+	Temperature   float64 `yaml:"temperature,omitempty"`
 }
 
 // SDEStargate represents a stargate within a solar system.
@@ -81,12 +81,12 @@ type SDEStargate struct {
 
 // SDEPlanet represents a planet within a solar system.
 type SDEPlanet struct {
-	CelestialIndex int64              `yaml:"celestialIndex,omitempty"`
+	CelestialIndex   int64                `yaml:"celestialIndex,omitempty"`
 	PlanetAttributes *SDEPlanetAttributes `yaml:"planetAttributes,omitempty"`
-	Position       []float64          `yaml:"position,omitempty"`
-	Radius         float64            `yaml:"radius,omitempty"`
-	TypeID         int64              `yaml:"typeID,omitempty"`
-	Moons          map[int64]SDEMoon  `yaml:"moons,omitempty"`
+	Position         []float64            `yaml:"position,omitempty"`
+	Radius           float64              `yaml:"radius,omitempty"`
+	TypeID           int64                `yaml:"typeID,omitempty"`
+	Moons            map[int64]SDEMoon    `yaml:"moons,omitempty"`
 }
 
 // SDEPlanetAttributes holds planet-specific attributes.
@@ -106,33 +106,33 @@ type SDEMoon struct {
 
 // SDEType represents an item type from typeIDs.yaml.
 type SDEType struct {
-	GroupID       int64             `yaml:"groupID"`
-	Name          map[string]string `yaml:"name"`
-	Description   map[string]string `yaml:"description,omitempty"`
-	Mass          float64           `yaml:"mass,omitempty"`
-	Volume        float64           `yaml:"volume,omitempty"`
-	Capacity      float64           `yaml:"capacity,omitempty"`
-	PortionSize   int64             `yaml:"portionSize,omitempty"`
-	Published     bool              `yaml:"published"`
-	MarketGroupID int64             `yaml:"marketGroupID,omitempty"`
-	GraphicID     int64             `yaml:"graphicID,omitempty"`
-	IconID        int64             `yaml:"iconID,omitempty"`
-	SoundID       int64             `yaml:"soundID,omitempty"`
-	BasePrice     float64           `yaml:"basePrice,omitempty"`
-	RaceID        int64             `yaml:"raceID,omitempty"`
-	SofFactionName string           `yaml:"sofFactionName,omitempty"`
+	GroupID        int64             `yaml:"groupID"`
+	Name           map[string]string `yaml:"name"`
+	Description    map[string]string `yaml:"description,omitempty"`
+	Mass           float64           `yaml:"mass,omitempty"`
+	Volume         float64           `yaml:"volume,omitempty"`
+	Capacity       float64           `yaml:"capacity,omitempty"`
+	PortionSize    int64             `yaml:"portionSize,omitempty"`
+	Published      bool              `yaml:"published"`
+	MarketGroupID  int64             `yaml:"marketGroupID,omitempty"`
+	GraphicID      int64             `yaml:"graphicID,omitempty"`
+	IconID         int64             `yaml:"iconID,omitempty"`
+	SoundID        int64             `yaml:"soundID,omitempty"`
+	BasePrice      float64           `yaml:"basePrice,omitempty"`
+	RaceID         int64             `yaml:"raceID,omitempty"`
+	SofFactionName string            `yaml:"sofFactionName,omitempty"`
 }
 
 // SDEGroup represents an item group from groupIDs.yaml.
 type SDEGroup struct {
-	CategoryID        int64             `yaml:"categoryID"`
-	Name              map[string]string `yaml:"name"`
-	Published         bool              `yaml:"published"`
-	Anchorable        bool              `yaml:"anchorable,omitempty"`
-	Anchored          bool              `yaml:"anchored,omitempty"`
-	FittableNonSingleton bool          `yaml:"fittableNonSingleton,omitempty"`
-	UseBasePrice      bool              `yaml:"useBasePrice,omitempty"`
-	IconID            int64             `yaml:"iconID,omitempty"`
+	CategoryID           int64             `yaml:"categoryID"`
+	Name                 map[string]string `yaml:"name"`
+	Published            bool              `yaml:"published"`
+	Anchorable           bool              `yaml:"anchorable,omitempty"`
+	Anchored             bool              `yaml:"anchored,omitempty"`
+	FittableNonSingleton bool              `yaml:"fittableNonSingleton,omitempty"`
+	UseBasePrice         bool              `yaml:"useBasePrice,omitempty"`
+	IconID               int64             `yaml:"iconID,omitempty"`
 }
 
 // SDECategory represents an item category from categoryIDs.yaml.
