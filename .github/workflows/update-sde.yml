@@ -34,9 +34,8 @@ jobs:
           # Fetch latest SDE build number from CCP's API (JSON Lines format)
           # The response contains JSON with _key="sde" and buildNumber
           echo "Fetching SDE version from CCP API..."
-          RESPONSE=$(curl -v https://developers.eveonline.com/static-data/tranquility/latest.jsonl 2>&1)
-          echo "API Response: $RESPONSE"
-          LATEST=$(echo "$RESPONSE" | grep -o '"buildNumber":[0-9]*' | grep -o '[0-9]*')
+          LATEST=$(curl -s https://developers.eveonline.com/static-data/tranquility/latest.jsonl | jq -r '.buildNumber')
+          echo "Extracted version: $LATEST"
 
           if [ -z "$LATEST" ]; then
             echo "Failed to fetch SDE version from CCP API"
