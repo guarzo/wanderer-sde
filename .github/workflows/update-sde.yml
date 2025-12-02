@@ -19,6 +19,9 @@ env:
   # SDE data goes to a new dedicated directory (not priv/repo/data which has other JSON files)
   SDE_PATH: priv/repo/sde
 
+permissions:
+  contents: write
+
 jobs:
   check-sde-update:
     runs-on: ubuntu-latest
