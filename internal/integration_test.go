@@ -1,11 +1,14 @@
 package internal
 
 import (
+	"encoding/csv"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/guarzo/wanderer-sde/internal/config"
+	"github.com/guarzo/wanderer-sde/internal/models"
 	"github.com/guarzo/wanderer-sde/internal/parser"
 	"github.com/guarzo/wanderer-sde/internal/transformer"
 	"github.com/guarzo/wanderer-sde/internal/writer"
@@ -339,15 +342,16 @@ func TestIntegration_FullPipeline(t *testing.T) {
 
 	// Verify transformation results
 	t.Run("transformation", func(t *testing.T) {
-		// Should filter to only ship types (6 ships - all types in ship groups, regardless of published status)
-		// Types in ship category groups: 587, 588, 589 (Frigate), 625 (Cruiser), 17738 (Battlecruiser), 99999 (Unpublished but in ship group)
-		if len(convertedData.ShipTypes) != 6 {
-			t.Errorf("Expected 6 ship types, got %d", len(convertedData.ShipTypes))
+		// Should include all types (not filtered to ships anymore)
+		// Test data has 7 types total
+		if len(convertedData.InvTypes) != 7 {
+			t.Errorf("Expected 7 types, got %d", len(convertedData.InvTypes))
 		}
 
-		// Should filter to only ship groups (4 groups with categoryID 6, including unpublished)
-		if len(convertedData.ItemGroups) != 4 {
-			t.Errorf("Expected 4 ship groups, got %d", len(convertedData.ItemGroups))
+		// Should include all groups (not filtered to ships anymore)
+		// Test data has 5 groups total
+		if len(convertedData.InvGroups) != 5 {
+			t.Errorf("Expected 5 groups, got %d", len(convertedData.InvGroups))
 		}
 
 		// Should extract wormhole classes (2 wormhole systems)
@@ -521,22 +525,22 @@ func TestIntegration_SortingConsistency(t *testing.T) {
 		}
 	})
 
-	t.Run("ship types sorted", func(t *testing.T) {
-		for i := 1; i < len(convertedData.ShipTypes); i++ {
-			if convertedData.ShipTypes[i-1].TypeID >= convertedData.ShipTypes[i].TypeID {
-				t.Errorf("Ship types not sorted: %d >= %d",
-					convertedData.ShipTypes[i-1].TypeID,
-					convertedData.ShipTypes[i].TypeID)
+	t.Run("types sorted", func(t *testing.T) {
+		for i := 1; i < len(convertedData.InvTypes); i++ {
+			if convertedData.InvTypes[i-1].TypeID >= convertedData.InvTypes[i].TypeID {
+				t.Errorf("Types not sorted: %d >= %d",
+					convertedData.InvTypes[i-1].TypeID,
+					convertedData.InvTypes[i].TypeID)
 			}
 		}
 	})
 
-	t.Run("item groups sorted", func(t *testing.T) {
-		for i := 1; i < len(convertedData.ItemGroups); i++ {
-			if convertedData.ItemGroups[i-1].GroupID >= convertedData.ItemGroups[i].GroupID {
-				t.Errorf("Item groups not sorted: %d >= %d",
-					convertedData.ItemGroups[i-1].GroupID,
-					convertedData.ItemGroups[i].GroupID)
+	t.Run("groups sorted", func(t *testing.T) {
+		for i := 1; i < len(convertedData.InvGroups); i++ {
+			if convertedData.InvGroups[i-1].GroupID >= convertedData.InvGroups[i].GroupID {
+				t.Errorf("Groups not sorted: %d >= %d",
+					convertedData.InvGroups[i-1].GroupID,
+					convertedData.InvGroups[i].GroupID)
 			}
 		}
 	})
@@ -634,4 +638,392 @@ func TestIntegration_DataIntegrity(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestIntegration_CSVOutput tests the full CSV output pipeline end-to-end.
+func TestIntegration_CSVOutput(t *testing.T) {
+	sdeDir := createTestSDE(t)
+	defer func() { _ = os.RemoveAll(sdeDir) }()
+
+	outputDir, err := os.MkdirTemp("", "csv_integration_test")
+	if err != nil {
+		t.Fatalf("failed to create output dir: %v", err)
+	}
+	defer func() { _ = os.RemoveAll(outputDir) }()
+
+	cfg := &config.Config{
+		SDEPath:      sdeDir,
+		OutputDir:    outputDir,
+		OutputFormat: config.FormatCSV,
+		Verbose:      false,
+	}
+
+	// Parse
+	p := parser.New(cfg, sdeDir)
+	parseResult, err := p.ParseAll()
+	if err != nil {
+		t.Fatalf("ParseAll failed: %v", err)
+	}
+
+	// Transform
+	tr := transformer.New(cfg)
+	convertedData, err := tr.Transform(parseResult)
+	if err != nil {
+		t.Fatalf("Transform failed: %v", err)
+	}
+
+	// Write CSV
+	w := writer.NewCSVWriter(cfg)
+	if err := w.WriteAll(convertedData); err != nil {
+		t.Fatalf("WriteAll failed: %v", err)
+	}
+
+	// Verify all expected CSV files exist
+	expectedFiles := writer.GetOutputFiles(config.FormatCSV)
+	for _, filename := range expectedFiles {
+		path := filepath.Join(outputDir, filename)
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Errorf("CSV file %s not created: %v", filename, err)
+			continue
+		}
+		if info.Size() == 0 {
+			t.Errorf("CSV file %s is empty", filename)
+		}
+	}
+}
+
+// TestIntegration_CSVFuzzworkFormat validates that CSV output matches Fuzzwork format expectations.
+func TestIntegration_CSVFuzzworkFormat(t *testing.T) {
+	sdeDir := createTestSDE(t)
+	defer func() { _ = os.RemoveAll(sdeDir) }()
+
+	outputDir, err := os.MkdirTemp("", "csv_fuzzwork_test")
+	if err != nil {
+		t.Fatalf("failed to create output dir: %v", err)
+	}
+	defer func() { _ = os.RemoveAll(outputDir) }()
+
+	cfg := &config.Config{
+		SDEPath:      sdeDir,
+		OutputDir:    outputDir,
+		OutputFormat: config.FormatCSV,
+		Verbose:      false,
+	}
+
+	// Parse and transform
+	p := parser.New(cfg, sdeDir)
+	parseResult, err := p.ParseAll()
+	if err != nil {
+		t.Fatalf("ParseAll failed: %v", err)
+	}
+
+	tr := transformer.New(cfg)
+	convertedData, err := tr.Transform(parseResult)
+	if err != nil {
+		t.Fatalf("Transform failed: %v", err)
+	}
+
+	// Write CSV
+	w := writer.NewCSVWriter(cfg)
+	if err := w.WriteAll(convertedData); err != nil {
+		t.Fatalf("WriteAll failed: %v", err)
+	}
+
+	// Test each CSV file for Fuzzwork format compliance
+	t.Run("mapSolarSystems.csv", func(t *testing.T) {
+		validateCSVHeaders(t, outputDir, writer.CSVFileSolarSystems, "mapSolarSystems")
+		validateCSVRowCount(t, outputDir, writer.CSVFileSolarSystems, len(convertedData.Universe.SolarSystems))
+
+		// Validate specific row content
+		records := readCSVFile(t, outputDir, writer.CSVFileSolarSystems)
+		if len(records) > 1 {
+			row := records[1] // First data row
+			// Check boolean formatting (should be "0" or "1")
+			validateBooleanColumn(t, "border", row[14])
+			validateBooleanColumn(t, "fringe", row[15])
+			validateBooleanColumn(t, "corridor", row[16])
+			validateBooleanColumn(t, "hub", row[17])
+			validateBooleanColumn(t, "international", row[18])
+			validateBooleanColumn(t, "regional", row[19])
+
+			// Check constellation is "None"
+			if row[20] != "None" {
+				t.Errorf("constellation should be 'None', got '%s'", row[20])
+			}
+		}
+	})
+
+	t.Run("mapRegions.csv", func(t *testing.T) {
+		validateCSVHeaders(t, outputDir, writer.CSVFileRegions, "mapRegions")
+		validateCSVRowCount(t, outputDir, writer.CSVFileRegions, len(convertedData.Universe.Regions))
+	})
+
+	t.Run("mapConstellations.csv", func(t *testing.T) {
+		validateCSVHeaders(t, outputDir, writer.CSVFileConstellations, "mapConstellations")
+		validateCSVRowCount(t, outputDir, writer.CSVFileConstellations, len(convertedData.Universe.Constellations))
+	})
+
+	t.Run("invTypes.csv", func(t *testing.T) {
+		validateCSVHeaders(t, outputDir, writer.CSVFileTypes, "invTypes")
+		validateCSVRowCount(t, outputDir, writer.CSVFileTypes, len(convertedData.InvTypes))
+
+		// Validate published field formatting
+		records := readCSVFile(t, outputDir, writer.CSVFileTypes)
+		if len(records) > 1 {
+			row := records[1]
+			validateBooleanColumn(t, "published", row[10])
+		}
+	})
+
+	t.Run("invGroups.csv", func(t *testing.T) {
+		validateCSVHeaders(t, outputDir, writer.CSVFileGroups, "invGroups")
+		validateCSVRowCount(t, outputDir, writer.CSVFileGroups, len(convertedData.InvGroups))
+
+		// Validate boolean formatting
+		records := readCSVFile(t, outputDir, writer.CSVFileGroups)
+		if len(records) > 1 {
+			row := records[1]
+			validateBooleanColumn(t, "useBasePrice", row[4])
+			validateBooleanColumn(t, "anchored", row[5])
+			validateBooleanColumn(t, "anchorable", row[6])
+			validateBooleanColumn(t, "fittableNonSingleton", row[7])
+			validateBooleanColumn(t, "published", row[8])
+		}
+	})
+
+	t.Run("mapLocationWormholeClasses.csv", func(t *testing.T) {
+		validateCSVHeaders(t, outputDir, writer.CSVFileWormholeClasses, "mapLocationWormholeClasses")
+		validateCSVRowCount(t, outputDir, writer.CSVFileWormholeClasses, len(convertedData.WormholeClasses))
+	})
+
+	t.Run("mapSolarSystemJumps.csv", func(t *testing.T) {
+		validateCSVHeaders(t, outputDir, writer.CSVFileSystemJumps, "mapSolarSystemJumps")
+		// SystemJumps are bidirectional, so count is 2x the number of connections
+		expectedJumps := len(convertedData.SystemJumps)
+		validateCSVRowCount(t, outputDir, writer.CSVFileSystemJumps, expectedJumps)
+
+		// Validate jump data contains all required fields
+		records := readCSVFile(t, outputDir, writer.CSVFileSystemJumps)
+		if len(records) > 1 {
+			row := records[1]
+			// All fields should be valid integers
+			for i, colName := range models.CSVHeaders["mapSolarSystemJumps"] {
+				if _, err := strconv.ParseInt(row[i], 10, 64); err != nil {
+					t.Errorf("column %s should be integer, got '%s'", colName, row[i])
+				}
+			}
+		}
+	})
+}
+
+// TestIntegration_CSVNullHandling tests that null/None values are formatted correctly.
+func TestIntegration_CSVNullHandling(t *testing.T) {
+	sdeDir := createTestSDE(t)
+	defer func() { _ = os.RemoveAll(sdeDir) }()
+
+	outputDir, err := os.MkdirTemp("", "csv_null_test")
+	if err != nil {
+		t.Fatalf("failed to create output dir: %v", err)
+	}
+	defer func() { _ = os.RemoveAll(outputDir) }()
+
+	cfg := &config.Config{
+		SDEPath:      sdeDir,
+		OutputDir:    outputDir,
+		OutputFormat: config.FormatCSV,
+		Verbose:      false,
+	}
+
+	p := parser.New(cfg, sdeDir)
+	parseResult, err := p.ParseAll()
+	if err != nil {
+		t.Fatalf("ParseAll failed: %v", err)
+	}
+
+	tr := transformer.New(cfg)
+	convertedData, err := tr.Transform(parseResult)
+	if err != nil {
+		t.Fatalf("Transform failed: %v", err)
+	}
+
+	w := writer.NewCSVWriter(cfg)
+	if err := w.WriteAll(convertedData); err != nil {
+		t.Fatalf("WriteAll failed: %v", err)
+	}
+
+	// Check that optional fields are formatted as "None" when nil
+	t.Run("solar system nullable fields", func(t *testing.T) {
+		records := readCSVFile(t, outputDir, writer.CSVFileSolarSystems)
+		for i, row := range records {
+			if i == 0 {
+				continue // Skip header
+			}
+			// factionID (index 22) and sunTypeID (index 24) can be "None"
+			factionID := row[22]
+			sunTypeID := row[24]
+
+			// If the value is not "None", it should be a valid integer
+			if factionID != "None" {
+				if _, err := strconv.ParseInt(factionID, 10, 64); err != nil {
+					t.Errorf("row %d: factionID should be 'None' or integer, got '%s'", i, factionID)
+				}
+			}
+			if sunTypeID != "None" {
+				if _, err := strconv.ParseInt(sunTypeID, 10, 64); err != nil {
+					t.Errorf("row %d: sunTypeID should be 'None' or integer, got '%s'", i, sunTypeID)
+				}
+			}
+		}
+	})
+
+	t.Run("type nullable fields", func(t *testing.T) {
+		records := readCSVFile(t, outputDir, writer.CSVFileTypes)
+		for i, row := range records {
+			if i == 0 {
+				continue // Skip header
+			}
+			// raceID (8), marketGroupID (11), iconID (12), soundID (13), graphicID (14) can be None
+			nullableIndices := []int{8, 11, 12, 13, 14}
+			for _, idx := range nullableIndices {
+				val := row[idx]
+				if val != "None" {
+					if _, err := strconv.ParseInt(val, 10, 64); err != nil {
+						t.Errorf("row %d, col %d: should be 'None' or integer, got '%s'", i, idx, val)
+					}
+				}
+			}
+		}
+	})
+}
+
+// TestIntegration_CSVColumnOrdering tests that columns are in the exact Fuzzwork order.
+func TestIntegration_CSVColumnOrdering(t *testing.T) {
+	sdeDir := createTestSDE(t)
+	defer func() { _ = os.RemoveAll(sdeDir) }()
+
+	outputDir, err := os.MkdirTemp("", "csv_ordering_test")
+	if err != nil {
+		t.Fatalf("failed to create output dir: %v", err)
+	}
+	defer func() { _ = os.RemoveAll(outputDir) }()
+
+	cfg := &config.Config{
+		SDEPath:      sdeDir,
+		OutputDir:    outputDir,
+		OutputFormat: config.FormatCSV,
+		Verbose:      false,
+	}
+
+	p := parser.New(cfg, sdeDir)
+	parseResult, err := p.ParseAll()
+	if err != nil {
+		t.Fatalf("ParseAll failed: %v", err)
+	}
+
+	tr := transformer.New(cfg)
+	convertedData, err := tr.Transform(parseResult)
+	if err != nil {
+		t.Fatalf("Transform failed: %v", err)
+	}
+
+	w := writer.NewCSVWriter(cfg)
+	if err := w.WriteAll(convertedData); err != nil {
+		t.Fatalf("WriteAll failed: %v", err)
+	}
+
+	// Verify exact column order for each file
+	testCases := []struct {
+		filename  string
+		headerKey string
+	}{
+		{writer.CSVFileSolarSystems, "mapSolarSystems"},
+		{writer.CSVFileRegions, "mapRegions"},
+		{writer.CSVFileConstellations, "mapConstellations"},
+		{writer.CSVFileTypes, "invTypes"},
+		{writer.CSVFileGroups, "invGroups"},
+		{writer.CSVFileWormholeClasses, "mapLocationWormholeClasses"},
+		{writer.CSVFileSystemJumps, "mapSolarSystemJumps"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.filename, func(t *testing.T) {
+			records := readCSVFile(t, outputDir, tc.filename)
+			if len(records) == 0 {
+				t.Fatal("empty CSV file")
+			}
+
+			headers := records[0]
+			expectedHeaders := models.CSVHeaders[tc.headerKey]
+
+			if len(headers) != len(expectedHeaders) {
+				t.Errorf("expected %d columns, got %d", len(expectedHeaders), len(headers))
+				return
+			}
+
+			for i, expected := range expectedHeaders {
+				if headers[i] != expected {
+					t.Errorf("column %d: expected '%s', got '%s'", i, expected, headers[i])
+				}
+			}
+		})
+	}
+}
+
+// Helper functions for CSV validation
+
+func readCSVFile(t *testing.T, dir, filename string) [][]string {
+	t.Helper()
+	path := filepath.Join(dir, filename)
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("failed to open %s: %v", filename, err)
+	}
+	defer func() { _ = file.Close() }()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		t.Fatalf("failed to read CSV %s: %v", filename, err)
+	}
+	return records
+}
+
+func validateCSVHeaders(t *testing.T, dir, filename, headerKey string) {
+	t.Helper()
+	records := readCSVFile(t, dir, filename)
+	if len(records) == 0 {
+		t.Fatalf("file %s is empty", filename)
+	}
+
+	expectedHeaders := models.CSVHeaders[headerKey]
+	if len(records[0]) != len(expectedHeaders) {
+		t.Errorf("file %s: expected %d columns, got %d", filename, len(expectedHeaders), len(records[0]))
+	}
+
+	for i, expected := range expectedHeaders {
+		if i >= len(records[0]) {
+			break
+		}
+		if records[0][i] != expected {
+			t.Errorf("file %s column %d: expected '%s', got '%s'", filename, i, expected, records[0][i])
+		}
+	}
+}
+
+func validateCSVRowCount(t *testing.T, dir, filename string, expectedDataRows int) {
+	t.Helper()
+	records := readCSVFile(t, dir, filename)
+	// +1 for header row
+	expectedTotal := expectedDataRows + 1
+	if len(records) != expectedTotal {
+		t.Errorf("file %s: expected %d rows (including header), got %d", filename, expectedTotal, len(records))
+	}
+}
+
+func validateBooleanColumn(t *testing.T, colName, value string) {
+	t.Helper()
+	if value != "0" && value != "1" {
+		t.Errorf("column %s should be '0' or '1', got '%s'", colName, value)
+	}
 }

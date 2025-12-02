@@ -39,6 +39,7 @@ func NewVersionChecker(cfg *config.Config) *VersionChecker {
 // VersionInfo contains information about the SDE version.
 type VersionInfo struct {
 	BuildNumber string `json:"sde"`
+	ReleaseDate string `json:"releaseDate,omitempty"`
 	ETag        string `json:"-"`
 }
 
@@ -91,6 +92,7 @@ func (vc *VersionChecker) GetLatestVersion(ctx context.Context) (*VersionInfo, e
 		if record.Key == "sde" && record.BuildNumber > 0 {
 			return &VersionInfo{
 				BuildNumber: fmt.Sprintf("%d", record.BuildNumber),
+				ReleaseDate: record.ReleaseDate,
 				ETag:        resp.Header.Get("ETag"),
 			}, nil
 		}

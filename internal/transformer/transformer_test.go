@@ -12,6 +12,8 @@ func TestTransformer_Transform(t *testing.T) {
 	cfg := &config.Config{Verbose: false}
 	tr := New(cfg)
 
+	sunType6 := int64(6)
+	sunType7 := int64(7)
 	parseResult := &parser.ParseResult{
 		Regions: []models.Region{
 			{RegionID: 10000002, RegionName: "The Forge"},
@@ -26,16 +28,18 @@ func TestTransformer_Transform(t *testing.T) {
 				RegionID:        10000002,
 				ConstellationID: 20000020,
 				SolarSystemName: "Jita",
-				SunTypeID:       6,
+				SunTypeID:       &sunType6,
 				Security:        0.9459, // Raw security
+				Constellation:   "None",
 			},
 			{
 				SolarSystemID:   30000001,
 				RegionID:        10000001,
 				ConstellationID: 20000001,
 				SolarSystemName: "Tanoo",
-				SunTypeID:       7,
+				SunTypeID:       &sunType7,
 				Security:        0.047, // Edge case: very low positive
+				Constellation:   "None",
 			},
 		},
 		Types: map[int64]models.SDEType{
@@ -98,14 +102,14 @@ func TestTransformer_Transform(t *testing.T) {
 		}
 	}
 
-	// Check ship types (should only include ships, not drones)
-	if len(result.ShipTypes) != 2 {
-		t.Errorf("Expected 2 ship types (excluding drone), got %d", len(result.ShipTypes))
+	// Check types (all types, not just ships)
+	if len(result.InvTypes) != 3 {
+		t.Errorf("Expected 3 types (all types), got %d", len(result.InvTypes))
 	}
 
-	// Check item groups (should only include ship groups)
-	if len(result.ItemGroups) != 1 {
-		t.Errorf("Expected 1 ship group, got %d", len(result.ItemGroups))
+	// Check groups (all groups)
+	if len(result.InvGroups) != 2 {
+		t.Errorf("Expected 2 groups, got %d", len(result.InvGroups))
 	}
 
 	// Check wormhole classes
@@ -137,8 +141,8 @@ func TestTransformer_Validate(t *testing.T) {
 					Constellations: make([]models.Constellation, 1100),
 					SolarSystems:   make([]models.SolarSystem, 8500),
 				},
-				ShipTypes:       make([]models.ShipType, 450),
-				ItemGroups:      make([]models.ItemGroup, 50),
+				InvTypes:        make([]models.InvType, 35000),
+				InvGroups:       make([]models.InvGroup, 50),
 				WormholeClasses: make([]models.WormholeClassLocation, 100),
 				SystemJumps:     make([]models.SystemJump, 11000),
 			},
@@ -153,7 +157,7 @@ func TestTransformer_Validate(t *testing.T) {
 					Constellations: make([]models.Constellation, 1100),
 					SolarSystems:   []models.SolarSystem{},
 				},
-				ShipTypes:   make([]models.ShipType, 450),
+				InvTypes:    make([]models.InvType, 35000),
 				SystemJumps: make([]models.SystemJump, 11000),
 			},
 			expectErrors:   true,
@@ -167,7 +171,7 @@ func TestTransformer_Validate(t *testing.T) {
 					Constellations: make([]models.Constellation, 10), // Below minimum
 					SolarSystems:   make([]models.SolarSystem, 100),  // Below minimum
 				},
-				ShipTypes:   make([]models.ShipType, 50), // Below minimum
+				InvTypes:    make([]models.InvType, 50), // Below minimum
 				SystemJumps: make([]models.SystemJump, 100),
 			},
 			expectErrors:   false, // These are warnings, not errors
@@ -247,14 +251,19 @@ func TestTransformer_SortFunctions(t *testing.T) {
 		}
 	})
 
-	// Test sortSystemJumps
-	t.Run("sortSystemJumps", func(t *testing.T) {
+	// Test transformSystemJumps (renamed from sortSystemJumps)
+	t.Run("transformSystemJumps", func(t *testing.T) {
+		systems := []models.SolarSystem{
+			{SolarSystemID: 1, RegionID: 100, ConstellationID: 1000},
+			{SolarSystemID: 2, RegionID: 100, ConstellationID: 1000},
+			{SolarSystemID: 3, RegionID: 200, ConstellationID: 2000},
+		}
 		jumps := []models.SystemJump{
 			{FromSolarSystemID: 2, ToSolarSystemID: 3},
 			{FromSolarSystemID: 1, ToSolarSystemID: 2},
 			{FromSolarSystemID: 1, ToSolarSystemID: 1},
 		}
-		sorted := tr.sortSystemJumps(jumps)
+		sorted := tr.transformSystemJumps(jumps, systems)
 
 		// Verify sorting by FromSolarSystemID then ToSolarSystemID
 		for i := 1; i < len(sorted); i++ {
@@ -264,6 +273,15 @@ func TestTransformer_SortFunctions(t *testing.T) {
 			if sorted[i-1].FromSolarSystemID == sorted[i].FromSolarSystemID &&
 				sorted[i-1].ToSolarSystemID >= sorted[i].ToSolarSystemID {
 				t.Errorf("System jumps not sorted by ToSolarSystemID within same FromSolarSystemID")
+			}
+		}
+
+		// Verify region/constellation enrichment
+		for _, jump := range sorted {
+			if jump.FromSolarSystemID == 1 {
+				if jump.FromRegionID != 100 || jump.FromConstellationID != 1000 {
+					t.Errorf("Jump from system 1 should have RegionID 100 and ConstellationID 1000")
+				}
 			}
 		}
 	})

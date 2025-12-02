@@ -3,12 +3,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -21,6 +23,18 @@ import (
 
 // Version is set at build time via ldflags.
 var Version = "dev"
+
+// SDEMetadata contains metadata about the SDE conversion.
+type SDEMetadata struct {
+	SDEVersion  string `json:"sde_version"`
+	ReleaseDate string `json:"release_date"`
+	GeneratedBy string `json:"generated_by"`
+	GeneratedAt string `json:"generated_at"`
+	Source      string `json:"source"`
+}
+
+// MetadataFileName is the name of the metadata output file.
+const MetadataFileName = "sde_metadata.json"
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
@@ -35,13 +49,16 @@ var rootCmd = &cobra.Command{
 	Use:   "sdeconvert",
 	Short: "Convert EVE SDE to Wanderer data format",
 	Long: `Converts EVE Online's Static Data Export (SDE) YAML files
-into the JSON format used by the Wanderer application.
+into CSV or JSON format compatible with Wanderer/Fuzzwork.
 
 This tool can download the latest SDE from CCP or use an existing
-SDE directory, then parse the YAML files and generate JSON output
+SDE directory, then parse the YAML files and generate output files
 compatible with Wanderer's data format.`,
-	Example: `  # Download latest SDE and convert to JSON
+	Example: `  # Download latest SDE and convert to CSV (default)
   sdeconvert --download --output ./output
+
+  # Convert to JSON format instead
+  sdeconvert --download --output ./output --format json
 
   # Convert an existing SDE directory
   sdeconvert --sde-path ./sde --output ./output
@@ -67,13 +84,28 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 
 	rootCmd.Flags().StringVarP(&cfg.SDEPath, "sde-path", "s", "", "Path to SDE directory or ZIP file")
-	rootCmd.Flags().StringVarP(&cfg.OutputDir, "output", "o", "./output", "Output directory for JSON files")
+	rootCmd.Flags().StringVarP(&cfg.OutputDir, "output", "o", "./output", "Output directory for output files")
 	rootCmd.Flags().BoolVarP(&cfg.DownloadSDE, "download", "d", false, "Download latest SDE from CCP")
 	rootCmd.Flags().StringVarP(&cfg.PassthroughDir, "passthrough", "p", "", "Directory with Wanderer JSON files to copy")
 	rootCmd.Flags().BoolVarP(&cfg.Verbose, "verbose", "v", false, "Enable verbose output")
-	rootCmd.Flags().BoolVar(&cfg.PrettyPrint, "pretty", true, "Pretty-print JSON output")
+	rootCmd.Flags().BoolVar(&cfg.PrettyPrint, "pretty", true, "Pretty-print JSON output (only applies to JSON format)")
 	rootCmd.Flags().IntVarP(&cfg.Workers, "workers", "w", 4, "Number of parallel workers")
 	rootCmd.Flags().StringVar(&cfg.SDEUrl, "sde-url", config.SDELatestURL, "URL to download SDE from")
+
+	// Output format flag with custom handling
+	var formatStr string
+	rootCmd.Flags().StringVarP(&formatStr, "format", "f", "csv", "Output format: csv or json (default: csv)")
+	rootCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		switch formatStr {
+		case "csv":
+			cfg.OutputFormat = config.FormatCSV
+		case "json":
+			cfg.OutputFormat = config.FormatJSON
+		default:
+			return fmt.Errorf("invalid format '%s': must be 'csv' or 'json'", formatStr)
+		}
+		return nil
+	}
 }
 
 func runConversion(cmd *cobra.Command, args []string) error {
@@ -98,12 +130,14 @@ func runConversion(cmd *cobra.Command, args []string) error {
 		fmt.Println("Configuration:")
 		fmt.Printf("  SDE Path:     %s\n", cfg.SDEPath)
 		fmt.Printf("  Output Dir:   %s\n", cfg.OutputDir)
+		fmt.Printf("  Output Format: %s\n", cfg.OutputFormat)
 		fmt.Printf("  Download:     %v\n", cfg.DownloadSDE)
 		fmt.Printf("  Passthrough:  %s\n", cfg.PassthroughDir)
 		fmt.Printf("  Workers:      %d\n", cfg.Workers)
 	}
 
 	sdePath := cfg.SDEPath
+	var versionInfo *downloader.VersionInfo
 
 	// Step 1: Download SDE if requested
 	if cfg.DownloadSDE {
@@ -116,7 +150,9 @@ func runConversion(cmd *cobra.Command, args []string) error {
 		}
 
 		// Check if update is needed
-		needsUpdate, versionInfo, err := vc.NeedsUpdate(ctx, cfg.OutputDir)
+		var needsUpdate bool
+		var err error
+		needsUpdate, versionInfo, err = vc.NeedsUpdate(ctx, cfg.OutputDir)
 		if err != nil {
 			fmt.Printf("Warning: could not check SDE version: %v\n", err)
 			needsUpdate = true // Proceed with download anyway
@@ -205,8 +241,8 @@ func runConversion(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Regions:         %d\n", validationResult.Regions)
 	fmt.Printf("  Constellations:  %d\n", validationResult.Constellations)
 	fmt.Printf("  Solar Systems:   %d\n", validationResult.SolarSystems)
-	fmt.Printf("  Ship Types:      %d\n", validationResult.ShipTypes)
-	fmt.Printf("  Ship Groups:     %d\n", validationResult.ItemGroups)
+	fmt.Printf("  Types:           %d\n", validationResult.InvTypes)
+	fmt.Printf("  Groups:          %d\n", validationResult.InvGroups)
 	fmt.Printf("  Wormhole Classes: %d\n", validationResult.WormholeClasses)
 	fmt.Printf("  System Jumps:    %d\n", validationResult.SystemJumps)
 
@@ -225,13 +261,25 @@ func runConversion(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("validation failed with %d errors", len(validationResult.Errors))
 	}
 
-	// Step 4: Write JSON output
-	w := writer.New(cfg)
+	// Step 4: Write output files
+	w, err := writer.NewWriter(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create writer: %w", err)
+	}
 	if err := w.WriteAll(convertedData); err != nil {
-		return fmt.Errorf("failed to write JSON output: %w", err)
+		return fmt.Errorf("failed to write output: %w", err)
 	}
 
-	// Step 5: Copy passthrough files
+	// Step 5: Write metadata file
+	if versionInfo != nil {
+		if err := writeMetadata(cfg.OutputDir, versionInfo); err != nil {
+			fmt.Printf("Warning: could not write metadata file: %v\n", err)
+		} else if cfg.Verbose {
+			fmt.Printf("  Wrote %s\n", MetadataFileName)
+		}
+	}
+
+	// Step 6: Copy passthrough files
 	if cfg.PassthroughDir != "" {
 		if err := w.CopyPassthroughFiles(cfg.PassthroughDir); err != nil {
 			return fmt.Errorf("failed to copy passthrough files: %w", err)
@@ -239,14 +287,23 @@ func runConversion(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("\nConversion complete! Output written to: %s\n", cfg.OutputDir)
-	fmt.Printf("Generated files:\n")
-	fmt.Printf("  - %s (%d systems)\n", writer.FileSolarSystems, len(convertedData.Universe.SolarSystems))
-	fmt.Printf("  - %s (%d regions)\n", writer.FileRegions, len(convertedData.Universe.Regions))
-	fmt.Printf("  - %s (%d constellations)\n", writer.FileConstellations, len(convertedData.Universe.Constellations))
-	fmt.Printf("  - %s (%d classes)\n", writer.FileWormholeClasses, len(convertedData.WormholeClasses))
-	fmt.Printf("  - %s (%d ships)\n", writer.FileShipTypes, len(convertedData.ShipTypes))
-	fmt.Printf("  - %s (%d groups)\n", writer.FileItemGroups, len(convertedData.ItemGroups))
-	fmt.Printf("  - %s (%d jumps)\n", writer.FileSystemJumps, len(convertedData.SystemJumps))
+	fmt.Printf("Generated files (%s format):\n", cfg.OutputFormat)
+
+	outputFiles := writer.GetOutputFiles(cfg.OutputFormat)
+	counts := []int{
+		len(convertedData.Universe.SolarSystems),
+		len(convertedData.Universe.Regions),
+		len(convertedData.Universe.Constellations),
+		len(convertedData.WormholeClasses),
+		len(convertedData.InvTypes),
+		len(convertedData.InvGroups),
+		len(convertedData.SystemJumps),
+	}
+	labels := []string{"systems", "regions", "constellations", "classes", "types", "groups", "jumps"}
+
+	for i, file := range outputFiles {
+		fmt.Printf("  - %s (%d %s)\n", file, counts[i], labels[i])
+	}
 
 	return nil
 }
@@ -289,4 +346,27 @@ func copyFile(src, dst string) error {
 
 	_, err = io.Copy(dstFile, srcFile)
 	return err
+}
+
+// writeMetadata writes the SDE metadata file to the output directory.
+func writeMetadata(outputDir string, versionInfo *downloader.VersionInfo) error {
+	metadata := SDEMetadata{
+		SDEVersion:  versionInfo.BuildNumber,
+		ReleaseDate: versionInfo.ReleaseDate,
+		GeneratedBy: "wanderer-sde",
+		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
+		Source:      "https://developers.eveonline.com/static-data",
+	}
+
+	data, err := json.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	metadataPath := filepath.Join(outputDir, MetadataFileName)
+	if err := os.WriteFile(metadataPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write metadata file: %w", err)
+	}
+
+	return nil
 }

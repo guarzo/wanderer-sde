@@ -19,11 +19,10 @@ jobs:
         with:
           go-version: '1.25'
 
-      - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
       - name: Run golangci-lint
-        run: golangci-lint run --timeout=5m
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.6
 
   test:
     name: Test
@@ -84,11 +83,13 @@ jobs:
       - name: Run integration test
         run: |
           ./bin/sdeconvert --download --output ./test-output --verbose
-          # Verify expected output files exist
-          test -f ./test-output/mapSolarSystems.json
-          test -f ./test-output/mapRegions.json
-          test -f ./test-output/mapConstellations.json
-          test -f ./test-output/invTypes.json
-          test -f ./test-output/invGroups.json
-          test -f ./test-output/mapSolarSystemJumps.json
+          # Verify expected CSV output files exist (default format is CSV)
+          test -f ./test-output/mapSolarSystems.csv
+          test -f ./test-output/mapRegions.csv
+          test -f ./test-output/mapConstellations.csv
+          test -f ./test-output/invTypes.csv
+          test -f ./test-output/invGroups.csv
+          test -f ./test-output/mapSolarSystemJumps.csv
+          test -f ./test-output/mapLocationWormholeClasses.csv
+          test -f ./test-output/sde_metadata.json
         timeout-minutes: 15

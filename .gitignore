@@ -48,3 +48,6 @@ debug
 plans/
 Claude.md
 .claude/
+
+# Build output (file only, not directories)
+/sdeconvert

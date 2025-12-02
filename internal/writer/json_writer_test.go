@@ -27,6 +27,7 @@ func TestJSONWriter_WriteAll(t *testing.T) {
 	w := New(cfg)
 
 	// Create test data
+	sunTypeID := int64(6)
 	data := &models.ConvertedData{
 		Universe: &models.UniverseData{
 			Regions: []models.Region{
@@ -41,15 +42,16 @@ func TestJSONWriter_WriteAll(t *testing.T) {
 					RegionID:        10000002,
 					ConstellationID: 20000020,
 					SolarSystemName: "Jita",
-					SunTypeID:       6,
+					SunTypeID:       &sunTypeID,
 					Security:        0.9,
+					Constellation:   "None",
 				},
 			},
 		},
-		ShipTypes: []models.ShipType{
+		InvTypes: []models.InvType{
 			{TypeID: 587, GroupID: 25, TypeName: "Rifter", Mass: 1350000, Volume: 27500, Capacity: 125},
 		},
-		ItemGroups: []models.ItemGroup{
+		InvGroups: []models.InvGroup{
 			{GroupID: 25, CategoryID: 6, GroupName: "Frigate"},
 		},
 		WormholeClasses: []models.WormholeClassLocation{
@@ -73,8 +75,8 @@ func TestJSONWriter_WriteAll(t *testing.T) {
 		{FileSolarSystems, data.Universe.SolarSystems},
 		{FileRegions, data.Universe.Regions},
 		{FileConstellations, data.Universe.Constellations},
-		{FileShipTypes, data.ShipTypes},
-		{FileItemGroups, data.ItemGroups},
+		{FileShipTypes, data.InvTypes},
+		{FileItemGroups, data.InvGroups},
 		{FileWormholeClasses, data.WormholeClasses},
 		{FileSystemJumps, data.SystemJumps},
 	}

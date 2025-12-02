@@ -45,17 +45,17 @@ func (t *Transformer) Transform(parseResult *parser.ParseResult) (*models.Conver
 	}
 	constellations := t.sortConstellations(parseResult.Constellations)
 
-	// Filter to ship types only
+	// Transform all types
 	if t.config.Verbose {
-		fmt.Println("  Filtering ship types...")
+		fmt.Println("  Transforming types...")
 	}
-	shipTypes := FilterShipTypes(parseResult.Types, parseResult.Groups)
+	invTypes := t.transformTypes(parseResult.Types)
 
-	// Filter to ship groups only
+	// Transform all groups
 	if t.config.Verbose {
-		fmt.Println("  Filtering ship groups...")
+		fmt.Println("  Transforming groups...")
 	}
-	shipGroups := FilterShipGroups(parseResult.Groups)
+	invGroups := t.transformGroups(parseResult.Groups)
 
 	// Sort wormhole classes for consistent output
 	if t.config.Verbose {
@@ -63,11 +63,11 @@ func (t *Transformer) Transform(parseResult *parser.ParseResult) (*models.Conver
 	}
 	wormholeClasses := t.sortWormholeClasses(parseResult.WormholeClasses)
 
-	// Sort system jumps for consistent output
+	// Transform system jumps with region/constellation lookup
 	if t.config.Verbose {
-		fmt.Println("  Sorting system jumps...")
+		fmt.Println("  Transforming system jumps...")
 	}
-	systemJumps := t.sortSystemJumps(parseResult.SystemJumps)
+	systemJumps := t.transformSystemJumps(parseResult.SystemJumps, systems)
 
 	result := &models.ConvertedData{
 		Universe: &models.UniverseData{
@@ -75,8 +75,8 @@ func (t *Transformer) Transform(parseResult *parser.ParseResult) (*models.Conver
 			Constellations: constellations,
 			SolarSystems:   systems,
 		},
-		ShipTypes:       shipTypes,
-		ItemGroups:      shipGroups,
+		InvTypes:        invTypes,
+		InvGroups:       invGroups,
 		WormholeClasses: wormholeClasses,
 		SystemJumps:     systemJumps,
 	}
@@ -86,8 +86,8 @@ func (t *Transformer) Transform(parseResult *parser.ParseResult) (*models.Conver
 		fmt.Printf("  Regions:         %d\n", len(result.Universe.Regions))
 		fmt.Printf("  Constellations:  %d\n", len(result.Universe.Constellations))
 		fmt.Printf("  Solar Systems:   %d\n", len(result.Universe.SolarSystems))
-		fmt.Printf("  Ship Types:      %d\n", len(result.ShipTypes))
-		fmt.Printf("  Ship Groups:     %d\n", len(result.ItemGroups))
+		fmt.Printf("  Types:           %d\n", len(result.InvTypes))
+		fmt.Printf("  Groups:          %d\n", len(result.InvGroups))
 		fmt.Printf("  Wormhole Classes: %d\n", len(result.WormholeClasses))
 		fmt.Printf("  System Jumps:    %d\n", len(result.SystemJumps))
 	}
@@ -95,19 +95,14 @@ func (t *Transformer) Transform(parseResult *parser.ParseResult) (*models.Conver
 	return result, nil
 }
 
-// transformSolarSystems applies security calculation to solar systems.
+// transformSolarSystems applies security calculation to solar systems while preserving all fields.
 func (t *Transformer) transformSolarSystems(systems []models.SolarSystem) []models.SolarSystem {
 	result := make([]models.SolarSystem, len(systems))
 
 	for i, sys := range systems {
-		result[i] = models.SolarSystem{
-			SolarSystemID:   sys.SolarSystemID,
-			RegionID:        sys.RegionID,
-			ConstellationID: sys.ConstellationID,
-			SolarSystemName: sys.SolarSystemName,
-			SunTypeID:       sys.SunTypeID,
-			Security:        GetTrueSecurity(sys.Security),
-		}
+		// Copy all fields, applying security transformation
+		result[i] = sys
+		result[i].Security = GetTrueSecurity(sys.Security)
 	}
 
 	// Sort by system ID for consistent output
@@ -154,11 +149,98 @@ func (t *Transformer) sortWormholeClasses(classes []models.WormholeClassLocation
 	return result
 }
 
-// sortSystemJumps returns system jumps sorted by from system ID, then to system ID.
-func (t *Transformer) sortSystemJumps(jumps []models.SystemJump) []models.SystemJump {
-	result := make([]models.SystemJump, len(jumps))
-	copy(result, jumps)
+// transformTypes converts SDE types to InvType format.
+func (t *Transformer) transformTypes(types map[int64]models.SDEType) []models.InvType {
+	result := make([]models.InvType, 0, len(types))
 
+	for typeID, sdeType := range types {
+		invType := models.InvType{
+			TypeID:        typeID,
+			GroupID:       sdeType.GroupID,
+			TypeName:      sdeType.Name["en"],
+			Description:   sdeType.Description["en"],
+			Mass:          sdeType.Mass,
+			Volume:        sdeType.Volume,
+			Capacity:      sdeType.Capacity,
+			PortionSize:   sdeType.PortionSize,
+			RaceID:        models.Int64Ptr(sdeType.RaceID),
+			BasePrice:     sdeType.BasePrice,
+			Published:     sdeType.Published,
+			MarketGroupID: models.Int64Ptr(sdeType.MarketGroupID),
+			IconID:        models.Int64Ptr(sdeType.IconID),
+			SoundID:       models.Int64Ptr(sdeType.SoundID),
+			GraphicID:     models.Int64Ptr(sdeType.GraphicID),
+		}
+		result = append(result, invType)
+	}
+
+	// Sort by type ID for consistent output
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].TypeID < result[j].TypeID
+	})
+
+	return result
+}
+
+// transformGroups converts SDE groups to InvGroup format.
+func (t *Transformer) transformGroups(groups map[int64]models.SDEGroup) []models.InvGroup {
+	result := make([]models.InvGroup, 0, len(groups))
+
+	for groupID, sdeGroup := range groups {
+		invGroup := models.InvGroup{
+			GroupID:              groupID,
+			CategoryID:           sdeGroup.CategoryID,
+			GroupName:            sdeGroup.Name["en"],
+			IconID:               models.Int64Ptr(sdeGroup.IconID),
+			UseBasePrice:         sdeGroup.UseBasePrice,
+			Anchored:             sdeGroup.Anchored,
+			Anchorable:           sdeGroup.Anchorable,
+			FittableNonSingleton: sdeGroup.FittableNonSingleton,
+			Published:            sdeGroup.Published,
+		}
+		result = append(result, invGroup)
+	}
+
+	// Sort by group ID for consistent output
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].GroupID < result[j].GroupID
+	})
+
+	return result
+}
+
+// transformSystemJumps enriches system jumps with region and constellation IDs.
+func (t *Transformer) transformSystemJumps(jumps []models.SystemJump, systems []models.SolarSystem) []models.SystemJump {
+	// Build lookup map for system -> region/constellation
+	systemLookup := make(map[int64]models.SolarSystem, len(systems))
+	for _, sys := range systems {
+		systemLookup[sys.SolarSystemID] = sys
+	}
+
+	result := make([]models.SystemJump, 0, len(jumps))
+	for _, jump := range jumps {
+		fromSys, fromOK := systemLookup[jump.FromSolarSystemID]
+		toSys, toOK := systemLookup[jump.ToSolarSystemID]
+
+		enrichedJump := models.SystemJump{
+			FromSolarSystemID: jump.FromSolarSystemID,
+			ToSolarSystemID:   jump.ToSolarSystemID,
+		}
+
+		if fromOK {
+			enrichedJump.FromRegionID = fromSys.RegionID
+			enrichedJump.FromConstellationID = fromSys.ConstellationID
+		}
+
+		if toOK {
+			enrichedJump.ToRegionID = toSys.RegionID
+			enrichedJump.ToConstellationID = toSys.ConstellationID
+		}
+
+		result = append(result, enrichedJump)
+	}
+
+	// Sort by from system ID, then to system ID for consistent output
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].FromSolarSystemID != result[j].FromSolarSystemID {
 			return result[i].FromSolarSystemID < result[j].FromSolarSystemID
@@ -175,8 +257,8 @@ func (t *Transformer) Validate(data *models.ConvertedData) *models.ValidationRes
 		SolarSystems:    len(data.Universe.SolarSystems),
 		Regions:         len(data.Universe.Regions),
 		Constellations:  len(data.Universe.Constellations),
-		ShipTypes:       len(data.ShipTypes),
-		ItemGroups:      len(data.ItemGroups),
+		InvTypes:        len(data.InvTypes),
+		InvGroups:       len(data.InvGroups),
 		SystemJumps:     len(data.SystemJumps),
 		WormholeClasses: len(data.WormholeClasses),
 	}
@@ -186,7 +268,7 @@ func (t *Transformer) Validate(data *models.ConvertedData) *models.ValidationRes
 		minSolarSystems   = 8000
 		minRegions        = 100
 		minConstellations = 1000
-		minShipTypes      = 400
+		minTypes          = 30000 // All types, not just ships
 		minSystemJumps    = 10000
 	)
 
@@ -209,10 +291,10 @@ func (t *Transformer) Validate(data *models.ConvertedData) *models.ValidationRes
 				result.Constellations, minConstellations))
 	}
 
-	if result.ShipTypes < minShipTypes {
+	if result.InvTypes < minTypes {
 		result.Warnings = append(result.Warnings,
-			fmt.Sprintf("Ship type count (%d) is below expected minimum (%d)",
-				result.ShipTypes, minShipTypes))
+			fmt.Sprintf("Type count (%d) is below expected minimum (%d)",
+				result.InvTypes, minTypes))
 	}
 
 	if result.SystemJumps < minSystemJumps {

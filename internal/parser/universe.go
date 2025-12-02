@@ -15,6 +15,9 @@ type SDEMapRegion struct {
 	NameID        int64             `yaml:"nameID,omitempty"`
 	DescriptionID int64             `yaml:"descriptionID,omitempty"`
 	FactionID     int64             `yaml:"factionID,omitempty"`
+	Center        []float64         `yaml:"center,omitempty"`
+	Max           []float64         `yaml:"max,omitempty"`
+	Min           []float64         `yaml:"min,omitempty"`
 }
 
 // SDEMapConstellation represents a constellation in the flat SDE format.
@@ -24,6 +27,10 @@ type SDEMapConstellation struct {
 	Name            map[string]string `yaml:"name"`
 	NameID          int64             `yaml:"nameID,omitempty"`
 	FactionID       int64             `yaml:"factionID,omitempty"`
+	Center          []float64         `yaml:"center,omitempty"`
+	Max             []float64         `yaml:"max,omitempty"`
+	Min             []float64         `yaml:"min,omitempty"`
+	Radius          float64           `yaml:"radius,omitempty"`
 }
 
 // SDEMapSolarSystem represents a solar system in the flat SDE format.
@@ -43,6 +50,11 @@ type SDEMapSolarSystem struct {
 	Hub             bool              `yaml:"hub,omitempty"`
 	International   bool              `yaml:"international,omitempty"`
 	Regional        bool              `yaml:"regional,omitempty"`
+	Center          []float64         `yaml:"center,omitempty"`
+	Max             []float64         `yaml:"max,omitempty"`
+	Min             []float64         `yaml:"min,omitempty"`
+	Luminosity      float64           `yaml:"luminosity,omitempty"`
+	Radius          float64           `yaml:"radius,omitempty"`
 }
 
 // ParseRegions parses the mapRegions.yaml file.
@@ -63,10 +75,36 @@ func (p *Parser) ParseRegions() ([]models.Region, error) {
 			name = fmt.Sprintf("Region %d", id)
 		}
 
-		regions = append(regions, models.Region{
+		region := models.Region{
 			RegionID:   id,
 			RegionName: name,
-		})
+			FactionID:  models.Int64Ptr(data.FactionID),
+			Nebula:     0, // Not available in SDE
+			Radius:     0, // Not directly available, could be calculated from min/max
+		}
+
+		// Extract coordinates from center array
+		if len(data.Center) >= 3 {
+			region.X = data.Center[0]
+			region.Y = data.Center[1]
+			region.Z = data.Center[2]
+		}
+
+		// Extract min coordinates
+		if len(data.Min) >= 3 {
+			region.XMin = data.Min[0]
+			region.YMin = data.Min[1]
+			region.ZMin = data.Min[2]
+		}
+
+		// Extract max coordinates
+		if len(data.Max) >= 3 {
+			region.XMax = data.Max[0]
+			region.YMax = data.Max[1]
+			region.ZMax = data.Max[2]
+		}
+
+		regions = append(regions, region)
 	}
 
 	// Sort by region ID for consistent output
@@ -94,11 +132,36 @@ func (p *Parser) ParseConstellations() ([]models.Constellation, error) {
 			name = fmt.Sprintf("Constellation %d", id)
 		}
 
-		constellations = append(constellations, models.Constellation{
+		constellation := models.Constellation{
+			RegionID:          data.RegionID,
 			ConstellationID:   id,
 			ConstellationName: name,
-			RegionID:          data.RegionID,
-		})
+			FactionID:         models.Int64Ptr(data.FactionID),
+			Radius:            data.Radius,
+		}
+
+		// Extract coordinates from center array
+		if len(data.Center) >= 3 {
+			constellation.X = data.Center[0]
+			constellation.Y = data.Center[1]
+			constellation.Z = data.Center[2]
+		}
+
+		// Extract min coordinates
+		if len(data.Min) >= 3 {
+			constellation.XMin = data.Min[0]
+			constellation.YMin = data.Min[1]
+			constellation.ZMin = data.Min[2]
+		}
+
+		// Extract max coordinates
+		if len(data.Max) >= 3 {
+			constellation.XMax = data.Max[0]
+			constellation.YMax = data.Max[1]
+			constellation.ZMax = data.Max[2]
+		}
+
+		constellations = append(constellations, constellation)
 	}
 
 	// Sort by constellation ID for consistent output
@@ -126,14 +189,48 @@ func (p *Parser) ParseSolarSystems() ([]models.SolarSystem, error) {
 			name = fmt.Sprintf("System %d", id)
 		}
 
-		systems = append(systems, models.SolarSystem{
-			SolarSystemID:   id,
+		system := models.SolarSystem{
 			RegionID:        data.RegionID,
 			ConstellationID: data.ConstellationID,
+			SolarSystemID:   id,
 			SolarSystemName: name,
-			SunTypeID:       data.SunTypeID,
+			Luminosity:      data.Luminosity,
+			Border:          data.Border,
+			Fringe:          data.Fringe,
+			Corridor:        data.Corridor,
+			Hub:             data.Hub,
+			International:   data.International,
+			Regional:        data.Regional,
+			Constellation:   "None", // Always "None" - legacy field
 			Security:        data.Security,
-		})
+			FactionID:       models.Int64Ptr(data.FactionID),
+			Radius:          data.Radius,
+			SunTypeID:       models.Int64Ptr(data.SunTypeID),
+			SecurityClass:   data.SecurityClass,
+		}
+
+		// Extract coordinates from center array
+		if len(data.Center) >= 3 {
+			system.X = data.Center[0]
+			system.Y = data.Center[1]
+			system.Z = data.Center[2]
+		}
+
+		// Extract min coordinates
+		if len(data.Min) >= 3 {
+			system.XMin = data.Min[0]
+			system.YMin = data.Min[1]
+			system.ZMin = data.Min[2]
+		}
+
+		// Extract max coordinates
+		if len(data.Max) >= 3 {
+			system.XMax = data.Max[0]
+			system.YMax = data.Max[1]
+			system.ZMax = data.Max[2]
+		}
+
+		systems = append(systems, system)
 	}
 
 	// Sort by solar system ID for consistent output

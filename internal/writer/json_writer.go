@@ -80,12 +80,12 @@ func (w *JSONWriter) WriteAll(data *models.ConvertedData) error {
 		return fmt.Errorf("failed to write wormhole classes: %w", err)
 	}
 
-	if err := w.WriteShipTypes(data.ShipTypes); err != nil {
-		return fmt.Errorf("failed to write ship types: %w", err)
+	if err := w.WriteTypes(data.InvTypes); err != nil {
+		return fmt.Errorf("failed to write types: %w", err)
 	}
 
-	if err := w.WriteGroups(data.ItemGroups); err != nil {
-		return fmt.Errorf("failed to write item groups: %w", err)
+	if err := w.WriteGroups(data.InvGroups); err != nil {
+		return fmt.Errorf("failed to write groups: %w", err)
 	}
 
 	if err := w.WriteSystemJumps(data.SystemJumps); err != nil {
@@ -115,13 +115,13 @@ func (w *JSONWriter) WriteWormholeClasses(classes []models.WormholeClassLocation
 	return w.writeJSON(FileWormholeClasses, classes)
 }
 
-// WriteShipTypes writes ship type data to JSON.
-func (w *JSONWriter) WriteShipTypes(ships []models.ShipType) error {
-	return w.writeJSON(FileShipTypes, ships)
+// WriteTypes writes type data to JSON.
+func (w *JSONWriter) WriteTypes(types []models.InvType) error {
+	return w.writeJSON(FileShipTypes, types)
 }
 
-// WriteGroups writes item group data to JSON.
-func (w *JSONWriter) WriteGroups(groups []models.ItemGroup) error {
+// WriteGroups writes group data to JSON.
+func (w *JSONWriter) WriteGroups(groups []models.InvGroup) error {
 	return w.writeJSON(FileItemGroups, groups)
 }
 
