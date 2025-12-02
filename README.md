@@ -1,16 +1,16 @@
 # wanderer-sde
 
-A Go tool to convert EVE Online's Static Data Export (SDE) YAML files into JSON format compatible with [Wanderer](https://github.com/wanderer-industries/wanderer).
+A Go tool to convert EVE Online's Static Data Export (SDE) YAML files into CSV or JSON format compatible with [Wanderer](https://github.com/wanderer-industries/wanderer) and [Fuzzwork](https://www.fuzzwork.co.uk/dump/).
 
 ## Overview
 
-This converter eliminates the dependency on third-party CSV dumps (like Fuzzwork) by processing the official SDE directly from CCP. It parses the YAML files and generates JSON output that Wanderer can consume.
+This converter eliminates the dependency on third-party CSV dumps (like Fuzzwork) by processing the official SDE directly from CCP. It parses the YAML files and generates CSV (default) or JSON output that Wanderer can consume.
 
 ### Features
 
 - Downloads the latest SDE directly from CCP
 - Parses YAML files with parallel processing for performance
-- Generates JSON files in Wanderer's expected format
+- Generates CSV files (default) matching Fuzzwork format, or JSON
 - Supports passthrough of community-maintained data files
 - Version tracking to avoid redundant downloads
 - Cross-platform support (Linux, macOS, Windows)
@@ -56,15 +56,17 @@ Usage:
   sdeconvert [command]
 
 Available Commands:
+  completion  Generate the autocompletion script for the specified shell
   help        Help about any command
   version     Print the version number
 
 Flags:
   -d, --download             Download latest SDE from CCP
+  -f, --format string        Output format: csv or json (default "csv")
   -h, --help                 help for sdeconvert
-  -o, --output string        Output directory for JSON files (default "./output")
+  -o, --output string        Output directory for output files (default "./output")
   -p, --passthrough string   Directory with Wanderer JSON files to copy
-      --pretty               Pretty-print JSON output (default true)
+      --pretty               Pretty-print JSON output (only applies to JSON format) (default true)
   -s, --sde-path string      Path to SDE directory or ZIP file
       --sde-url string       URL to download SDE from
   -v, --verbose              Enable verbose output
@@ -73,12 +75,20 @@ Flags:
 
 ### Usage Examples
 
-#### Download and Convert Latest SDE
+#### Download and Convert Latest SDE (CSV format)
 
-The simplest use case - download the latest SDE from CCP and convert it:
+The simplest use case - download the latest SDE from CCP and convert it to CSV:
 
 ```bash
 sdeconvert --download --output ./output
+```
+
+#### Convert to JSON Format
+
+To output JSON instead of CSV:
+
+```bash
+sdeconvert --download --output ./output --format json
 ```
 
 #### Convert an Existing SDE Directory
@@ -119,19 +129,19 @@ sdeconvert --download \
 
 ## Output Files
 
-The converter generates the following JSON files:
+The converter generates the following files (CSV by default, JSON with `--format json`):
 
 ### Generated from SDE
 
 | File | Description | Source |
 |------|-------------|--------|
-| `mapSolarSystems.json` | Solar systems with security status, region/constellation IDs, and sun type | `sde/fsd/universe/*/solarsystem.yaml` |
-| `mapRegions.json` | Region ID and name mappings | `sde/fsd/universe/*/region.yaml` |
-| `mapConstellations.json` | Constellation ID, name, and region mappings | `sde/fsd/universe/*/constellation.yaml` |
-| `mapLocationWormholeClasses.json` | Wormhole class assignments for systems/regions | `sde/bsd/mapLocationWormholeClasses.yaml` |
-| `invTypes.json` | Ship type definitions (filtered to category 6) | `sde/fsd/typeIDs.yaml` |
-| `invGroups.json` | Ship group definitions | `sde/fsd/groupIDs.yaml` |
-| `mapSolarSystemJumps.json` | Stargate connections between systems | `sde/bsd/mapSolarSystemJumps.yaml` |
+| `mapSolarSystems.csv` | Solar systems with coordinates, security status, region/constellation IDs | `mapSolarSystems.yaml` |
+| `mapRegions.csv` | Region ID, name, and coordinate bounds | `mapRegions.yaml` |
+| `mapConstellations.csv` | Constellation ID, name, region, and coordinate bounds | `mapConstellations.yaml` |
+| `mapLocationWormholeClasses.csv` | Wormhole class assignments for locations | `mapLocationWormholeClasses.yaml` |
+| `invTypes.csv` | All item type definitions | `types.yaml` |
+| `invGroups.csv` | All item group definitions | `groups.yaml` |
+| `mapSolarSystemJumps.csv` | Stargate connections between systems | `mapStargates.yaml` |
 
 ### Passthrough Files (Community-Maintained)
 
@@ -151,20 +161,11 @@ These files are copied from the Wanderer data directory when `--passthrough` is 
 
 ## Data Formats
 
-### Solar Systems (`mapSolarSystems.json`)
+The output format matches Fuzzwork's CSV dump format. When using `--format json`, the same data is output as JSON arrays.
 
-```json
-[
-  {
-    "solarSystemID": 30000142,
-    "regionID": 10000002,
-    "constellationID": 20000020,
-    "solarSystemName": "Jita",
-    "sunTypeID": 6,
-    "security": 0.9459
-  }
-]
-```
+### Solar Systems (`mapSolarSystems.csv`)
+
+CSV columns: `regionID`, `constellationID`, `solarSystemID`, `solarSystemName`, `x`, `y`, `z`, `xMin`, `xMax`, `yMin`, `yMax`, `zMin`, `zMax`, `luminosity`, `border`, `fringe`, `corridor`, `hub`, `international`, `regional`, `constellation`, `security`, `factionID`, `radius`, `sunTypeID`, `securityClass`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -172,42 +173,21 @@ These files are copied from the Wanderer data directory when `--passthrough` is 
 | `regionID` | int64 | Parent region ID |
 | `constellationID` | int64 | Parent constellation ID |
 | `solarSystemName` | string | Display name of the system |
-| `sunTypeID` | int64 | Type ID of the system's star (optional) |
 | `security` | float64 | Security status (-1.0 to 1.0) |
+| `sunTypeID` | int64 | Type ID of the system's star (optional) |
+| `securityClass` | string | Security class (A, B, C, etc.) |
 
-### Regions (`mapRegions.json`)
+### Regions (`mapRegions.csv`)
 
-```json
-[
-  {
-    "regionID": 10000002,
-    "regionName": "The Forge"
-  }
-]
-```
+CSV columns: `regionID`, `regionName`, `x`, `y`, `z`, `xMin`, `xMax`, `yMin`, `yMax`, `zMin`, `zMax`, `factionID`, `nebula`, `radius`
 
-### Constellations (`mapConstellations.json`)
+### Constellations (`mapConstellations.csv`)
 
-```json
-[
-  {
-    "constellationID": 20000020,
-    "constellationName": "Kimotoro",
-    "regionID": 10000002
-  }
-]
-```
+CSV columns: `regionID`, `constellationID`, `constellationName`, `x`, `y`, `z`, `xMin`, `xMax`, `yMin`, `yMax`, `zMin`, `zMax`, `factionID`, `radius`
 
-### Wormhole Classes (`mapLocationWormholeClasses.json`)
+### Wormhole Classes (`mapLocationWormholeClasses.csv`)
 
-```json
-[
-  {
-    "locationID": 10000002,
-    "wormholeClassID": 7
-  }
-]
-```
+CSV columns: `locationID`, `wormholeClassID`
 
 Location IDs can be regions, constellations, or solar systems. Wormhole class IDs:
 - 1-6: C1-C6 wormhole space
@@ -219,49 +199,23 @@ Location IDs can be regions, constellations, or solar systems. Wormhole class ID
 - 14-18: Drifter wormholes
 - 25: Pochven (Triglavian space)
 
-### Ship Types (`invTypes.json`)
+### Item Types (`invTypes.csv`)
 
-```json
-[
-  {
-    "typeID": 587,
-    "groupID": 25,
-    "typeName": "Rifter",
-    "mass": 1350000.0,
-    "volume": 27500.0,
-    "capacity": 125.0
-  }
-]
-```
+CSV columns: `typeID`, `groupID`, `typeName`, `description`, `mass`, `volume`, `capacity`, `portionSize`, `raceID`, `basePrice`, `published`, `marketGroupID`, `iconID`, `soundID`, `graphicID`
 
-Only ships (category ID 6) are included in this output.
+Contains all item types from the SDE.
 
-### Item Groups (`invGroups.json`)
+### Item Groups (`invGroups.csv`)
 
-```json
-[
-  {
-    "groupID": 25,
-    "categoryID": 6,
-    "groupName": "Frigate"
-  }
-]
-```
+CSV columns: `groupID`, `categoryID`, `groupName`, `iconID`, `useBasePrice`, `anchored`, `anchorable`, `fittableNonSingleton`, `published`
 
-Only ship groups (category ID 6) are included.
+Contains all item groups from the SDE.
 
-### System Jumps (`mapSolarSystemJumps.json`)
+### System Jumps (`mapSolarSystemJumps.csv`)
 
-```json
-[
-  {
-    "fromSolarSystemID": 30000142,
-    "toSolarSystemID": 30000144
-  }
-]
-```
+CSV columns: `fromRegionID`, `fromConstellationID`, `fromSolarSystemID`, `toSolarSystemID`, `toConstellationID`, `toRegionID`
 
-Represents stargate connections between solar systems. Each connection appears once (not duplicated in reverse).
+Represents stargate connections between solar systems.
 
 ## Development
 
@@ -309,32 +263,35 @@ wanderer-sde/
 │   ├── downloader/
 │   │   ├── downloader.go        # SDE download & extraction
 │   │   └── version.go           # Version checking
+│   ├── models/
+│   │   ├── sde.go               # SDE data structures
+│   │   ├── wanderer.go          # Output data structures
+│   │   └── csv.go               # CSV formatting helpers
 │   ├── parser/
 │   │   ├── parser.go            # Main parser orchestration
-│   │   ├── universe.go          # Universe file parsing
-│   │   ├── types.go             # typeIDs.yaml parsing
-│   │   ├── groups.go            # groupIDs.yaml parsing
-│   │   ├── categories.go        # categoryIDs.yaml parsing
-│   │   └── jumps.go             # mapSolarSystemJumps parsing
+│   │   ├── universe.go          # Region/constellation/system parsing
+│   │   ├── types.go             # types.yaml parsing
+│   │   ├── groups.go            # groups.yaml parsing
+│   │   ├── categories.go        # categories.yaml parsing
+│   │   ├── jumps.go             # Stargate jump parsing
+│   │   ├── stars.go             # Star type parsing
+│   │   └── wormhole_classes.go  # Wormhole class parsing
 │   ├── transformer/
 │   │   ├── transformer.go       # Data transformation logic
+│   │   ├── bounds.go            # Coordinate bounds calculation
 │   │   ├── security.go          # Security status calculation
-│   │   └── filters.go           # Ship category filtering
-│   ├── writer/
-│   │   └── json_writer.go       # JSON output generation
-│   └── models/
-│       ├── sde.go               # SDE data structures
-│       └── wanderer.go          # Wanderer output structures
+│   │   └── filters.go           # Category filtering
+│   └── writer/
+│       ├── writer.go            # Writer interface
+│       ├── csv_writer.go        # CSV output generation
+│       └── json_writer.go       # JSON output generation
 ├── pkg/
 │   └── yaml/
 │       └── yaml.go              # YAML utilities
-├── plans/
-│   └── IMPLEMENTATION_PLAN.md   # Development roadmap
 ├── go.mod
 ├── go.sum
 ├── Makefile
 ├── README.md
-├── CONTRIBUTING.md
 └── LICENSE
 ```
 
@@ -344,8 +301,8 @@ The converter follows a pipeline architecture:
 
 1. **Downloader**: Downloads and extracts the SDE from CCP
 2. **Parser**: Reads YAML files and converts to internal Go structs
-3. **Transformer**: Applies business logic (security calculation, filtering)
-4. **Writer**: Serializes data to JSON files
+3. **Transformer**: Applies business logic (bounds calculation, faction inheritance, sorting)
+4. **Writer**: Serializes data to CSV or JSON files
 
 Each component is isolated and testable independently.
 

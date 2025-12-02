@@ -94,9 +94,6 @@ func (p *Parser) ParseRegions() ([]models.Region, error) {
 			region.Z = data.Position.Z
 		}
 
-		// Note: Min/Max coordinates are not available in new SDE format
-		// They would need to be calculated from constituent systems if needed
-
 		regions = append(regions, region)
 	}
 
@@ -139,8 +136,6 @@ func (p *Parser) ParseConstellations() ([]models.Constellation, error) {
 			constellation.Y = data.Position.Y
 			constellation.Z = data.Position.Z
 		}
-
-		// Note: Min/Max coordinates are not available in new SDE format
 
 		constellations = append(constellations, constellation)
 	}
@@ -205,8 +200,6 @@ func (p *Parser) ParseSolarSystems(starTypeMap map[int64]int64) ([]models.SolarS
 			system.Y = data.Position.Y
 			system.Z = data.Position.Z
 		}
-
-		// Note: Min/Max coordinates are not available in new SDE format
 
 		systems = append(systems, system)
 	}

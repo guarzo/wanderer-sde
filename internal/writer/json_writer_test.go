@@ -189,16 +189,12 @@ func TestJSONWriter_PrettyPrint(t *testing.T) {
 				t.Fatalf("failed to read output: %v", err)
 			}
 
-			hasNewlines := len(content) > 0 && content[0] == '['
 			// Pretty print should have indentation (newlines after brackets)
-			// For an array with one element, pretty print produces something like:
-			// [\n  {\n    ...
 			if tt.expectMulti {
 				if len(content) < 10 {
 					t.Error("expected pretty-printed (multi-line) output")
 				}
 			}
-			_ = hasNewlines // Simplified check - just ensure it doesn't error
 		})
 	}
 }
