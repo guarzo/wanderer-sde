@@ -62,69 +62,57 @@ func createTestSDE(t *testing.T) string {
 		t.Fatalf("failed to create mapConstellations.yaml: %v", err)
 	}
 
-	// Create mapSolarSystems.yaml with various security levels
+	// Create mapSolarSystems.yaml with new SDE format (2025+)
 	systemsYAML := `30000142:
-  solarSystemID: 30000142
   constellationID: 20000020
   regionID: 10000002
   name:
     en: "Jita"
-  security: 0.9459
-  sunTypeID: 6
-  wormholeClassID: 0
+  securityStatus: 0.9459
+  starID: 40000006
 30000001:
-  solarSystemID: 30000001
   constellationID: 20000001
   regionID: 10000001
   name:
     en: "Tanoo"
-  security: 0.8576
-  sunTypeID: 7
-  wormholeClassID: 0
+  securityStatus: 0.8576
+  starID: 40000007
 30000144:
-  solarSystemID: 30000144
   constellationID: 20000020
   regionID: 10000002
   name:
     en: "Perimeter"
-  security: 0.94
-  sunTypeID: 8
-  wormholeClassID: 0
+  securityStatus: 0.94
+  starID: 40000008
 30000145:
-  solarSystemID: 30000145
   constellationID: 20000020
   regionID: 10000002
   name:
     en: "LowSec System"
-  security: 0.4
-  sunTypeID: 9
-  wormholeClassID: 0
+  securityStatus: 0.4
+  starID: 40000009
 30000146:
-  solarSystemID: 30000146
   constellationID: 20000020
   regionID: 10000002
   name:
     en: "NullSec System"
-  security: -0.7
-  sunTypeID: 10
-  wormholeClassID: 0
+  securityStatus: -0.7
+  starID: 40000010
 31000001:
-  solarSystemID: 31000001
   constellationID: 21000001
   regionID: 11000001
   name:
     en: "J123456"
-  security: -1.0
-  sunTypeID: 45041
+  securityStatus: -1.0
+  starID: 40045041
   wormholeClassID: 3
 31000002:
-  solarSystemID: 31000002
   constellationID: 21000001
   regionID: 11000001
   name:
     en: "J654321"
-  security: -1.0
-  sunTypeID: 45041
+  securityStatus: -1.0
+  starID: 40045041
   wormholeClassID: 5
 `
 	if err := os.WriteFile(filepath.Join(tmpDir, "mapSolarSystems.yaml"), []byte(systemsYAML), 0644); err != nil {
@@ -359,13 +347,13 @@ func TestIntegration_FullPipeline(t *testing.T) {
 			t.Errorf("Expected 2 wormhole classes, got %d", len(convertedData.WormholeClasses))
 		}
 
-		// Verify security calculation for specific systems
+		// Verify raw security values are preserved (Wanderer calculates true security itself)
 		for _, sys := range convertedData.Universe.SolarSystems {
 			switch sys.SolarSystemName {
 			case "Jita":
-				// 0.9459 should round to 0.9
-				if sys.Security != 0.9 {
-					t.Errorf("Jita security should be 0.9, got %f", sys.Security)
+				// Raw security value should be preserved
+				if sys.Security != 0.9459 {
+					t.Errorf("Jita security should be 0.9459 (raw), got %f", sys.Security)
 				}
 			case "J123456":
 				// Wormhole security stays at -1.0

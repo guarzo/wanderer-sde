@@ -89,15 +89,16 @@ func TestTransformer_Transform(t *testing.T) {
 	// Find Jita and verify security transformation
 	for _, sys := range result.Universe.SolarSystems {
 		if sys.SolarSystemName == "Jita" {
-			// 0.9459 should round to 0.9
-			if sys.Security != 0.9 {
-				t.Errorf("Expected Jita security 0.9, got %f", sys.Security)
+			// Raw security value should be preserved (not transformed)
+			// Wanderer calculates true security itself from the raw value
+			if sys.Security != 0.9459 {
+				t.Errorf("Expected Jita raw security 0.9459, got %f", sys.Security)
 			}
 		}
 		if sys.SolarSystemName == "Tanoo" {
-			// 0.047 is > 0 and < 0.05, so should round UP to 0.1
-			if sys.Security != 0.1 {
-				t.Errorf("Expected Tanoo security 0.1 (low positive rounds up), got %f", sys.Security)
+			// Raw security value should be preserved
+			if sys.Security != 0.047 {
+				t.Errorf("Expected Tanoo raw security 0.047, got %f", sys.Security)
 			}
 		}
 	}
@@ -306,7 +307,8 @@ func TestTransformer_TransformSolarSystems(t *testing.T) {
 		}
 	}
 
-	// Verify security transformations
+	// Verify security values are preserved (not transformed)
+	// Wanderer calculates true security itself from raw values
 	for _, sys := range result {
 		switch sys.SolarSystemID {
 		case 1:
@@ -314,14 +316,14 @@ func TestTransformer_TransformSolarSystems(t *testing.T) {
 				t.Errorf("System 1 security should be -0.5, got %f", sys.Security)
 			}
 		case 2:
-			// 0.047 is > 0 and < 0.05, rounds up to 0.1
-			if sys.Security != 0.1 {
-				t.Errorf("System 2 security should be 0.1, got %f", sys.Security)
+			// Raw value should be preserved
+			if sys.Security != 0.047 {
+				t.Errorf("System 2 security should be 0.047 (raw), got %f", sys.Security)
 			}
 		case 3:
-			// 0.9459 truncates to 0.94, rounds to 0.9
-			if sys.Security != 0.9 {
-				t.Errorf("System 3 security should be 0.9, got %f", sys.Security)
+			// Raw value should be preserved
+			if sys.Security != 0.9459 {
+				t.Errorf("System 3 security should be 0.9459 (raw), got %f", sys.Security)
 			}
 		}
 	}

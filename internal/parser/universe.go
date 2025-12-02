@@ -8,16 +8,23 @@ import (
 	"github.com/guarzo/wanderer-sde/pkg/yaml"
 )
 
+// SDEPosition represents a position with x/y/z coordinates.
+type SDEPosition struct {
+	X float64 `yaml:"x"`
+	Y float64 `yaml:"y"`
+	Z float64 `yaml:"z"`
+}
+
 // SDEMapRegion represents a region in the flat SDE format.
 type SDEMapRegion struct {
-	RegionID      int64             `yaml:"regionID"`
-	Name          map[string]string `yaml:"name"`
-	NameID        int64             `yaml:"nameID,omitempty"`
-	DescriptionID int64             `yaml:"descriptionID,omitempty"`
-	FactionID     int64             `yaml:"factionID,omitempty"`
-	Center        []float64         `yaml:"center,omitempty"`
-	Max           []float64         `yaml:"max,omitempty"`
-	Min           []float64         `yaml:"min,omitempty"`
+	RegionID         int64             `yaml:"regionID"`
+	Name             map[string]string `yaml:"name"`
+	NameID           int64             `yaml:"nameID,omitempty"`
+	DescriptionID    int64             `yaml:"descriptionID,omitempty"`
+	FactionID        int64             `yaml:"factionID,omitempty"`
+	Position         *SDEPosition      `yaml:"position,omitempty"`
+	NebulaID         int64             `yaml:"nebulaID,omitempty"`
+	WormholeClassID  int64             `yaml:"wormholeClassID,omitempty"`
 }
 
 // SDEMapConstellation represents a constellation in the flat SDE format.
@@ -27,10 +34,9 @@ type SDEMapConstellation struct {
 	Name            map[string]string `yaml:"name"`
 	NameID          int64             `yaml:"nameID,omitempty"`
 	FactionID       int64             `yaml:"factionID,omitempty"`
-	Center          []float64         `yaml:"center,omitempty"`
-	Max             []float64         `yaml:"max,omitempty"`
-	Min             []float64         `yaml:"min,omitempty"`
+	Position        *SDEPosition      `yaml:"position,omitempty"`
 	Radius          float64           `yaml:"radius,omitempty"`
+	WormholeClassID int64             `yaml:"wormholeClassID,omitempty"`
 }
 
 // SDEMapSolarSystem represents a solar system in the flat SDE format.
@@ -39,9 +45,9 @@ type SDEMapSolarSystem struct {
 	ConstellationID int64             `yaml:"constellationID"`
 	RegionID        int64             `yaml:"regionID"`
 	Name            map[string]string `yaml:"name"`
-	Security        float64           `yaml:"security"`
+	SecurityStatus  float64           `yaml:"securityStatus"`
 	SecurityClass   string            `yaml:"securityClass,omitempty"`
-	SunTypeID       int64             `yaml:"sunTypeID,omitempty"`
+	StarID          int64             `yaml:"starID,omitempty"`
 	WormholeClassID int64             `yaml:"wormholeClassID,omitempty"`
 	FactionID       int64             `yaml:"factionID,omitempty"`
 	Border          bool              `yaml:"border,omitempty"`
@@ -50,9 +56,7 @@ type SDEMapSolarSystem struct {
 	Hub             bool              `yaml:"hub,omitempty"`
 	International   bool              `yaml:"international,omitempty"`
 	Regional        bool              `yaml:"regional,omitempty"`
-	Center          []float64         `yaml:"center,omitempty"`
-	Max             []float64         `yaml:"max,omitempty"`
-	Min             []float64         `yaml:"min,omitempty"`
+	Position        *SDEPosition      `yaml:"position,omitempty"`
 	Luminosity      float64           `yaml:"luminosity,omitempty"`
 	Radius          float64           `yaml:"radius,omitempty"`
 }
@@ -79,30 +83,19 @@ func (p *Parser) ParseRegions() ([]models.Region, error) {
 			RegionID:   id,
 			RegionName: name,
 			FactionID:  models.Int64Ptr(data.FactionID),
-			Nebula:     0, // Not available in SDE
-			Radius:     0, // Not directly available, could be calculated from min/max
+			Nebula:     data.NebulaID,
+			Radius:     0, // Not directly available in new SDE format
 		}
 
-		// Extract coordinates from center array
-		if len(data.Center) >= 3 {
-			region.X = data.Center[0]
-			region.Y = data.Center[1]
-			region.Z = data.Center[2]
+		// Extract coordinates from position object
+		if data.Position != nil {
+			region.X = data.Position.X
+			region.Y = data.Position.Y
+			region.Z = data.Position.Z
 		}
 
-		// Extract min coordinates
-		if len(data.Min) >= 3 {
-			region.XMin = data.Min[0]
-			region.YMin = data.Min[1]
-			region.ZMin = data.Min[2]
-		}
-
-		// Extract max coordinates
-		if len(data.Max) >= 3 {
-			region.XMax = data.Max[0]
-			region.YMax = data.Max[1]
-			region.ZMax = data.Max[2]
-		}
+		// Note: Min/Max coordinates are not available in new SDE format
+		// They would need to be calculated from constituent systems if needed
 
 		regions = append(regions, region)
 	}
@@ -140,26 +133,14 @@ func (p *Parser) ParseConstellations() ([]models.Constellation, error) {
 			Radius:            data.Radius,
 		}
 
-		// Extract coordinates from center array
-		if len(data.Center) >= 3 {
-			constellation.X = data.Center[0]
-			constellation.Y = data.Center[1]
-			constellation.Z = data.Center[2]
+		// Extract coordinates from position object
+		if data.Position != nil {
+			constellation.X = data.Position.X
+			constellation.Y = data.Position.Y
+			constellation.Z = data.Position.Z
 		}
 
-		// Extract min coordinates
-		if len(data.Min) >= 3 {
-			constellation.XMin = data.Min[0]
-			constellation.YMin = data.Min[1]
-			constellation.ZMin = data.Min[2]
-		}
-
-		// Extract max coordinates
-		if len(data.Max) >= 3 {
-			constellation.XMax = data.Max[0]
-			constellation.YMax = data.Max[1]
-			constellation.ZMax = data.Max[2]
-		}
+		// Note: Min/Max coordinates are not available in new SDE format
 
 		constellations = append(constellations, constellation)
 	}
@@ -202,33 +183,21 @@ func (p *Parser) ParseSolarSystems() ([]models.SolarSystem, error) {
 			International:   data.International,
 			Regional:        data.Regional,
 			Constellation:   "None", // Always "None" - legacy field
-			Security:        data.Security,
+			Security:        data.SecurityStatus,
 			FactionID:       models.Int64Ptr(data.FactionID),
 			Radius:          data.Radius,
-			SunTypeID:       models.Int64Ptr(data.SunTypeID),
+			SunTypeID:       models.Int64Ptr(data.StarID),
 			SecurityClass:   data.SecurityClass,
 		}
 
-		// Extract coordinates from center array
-		if len(data.Center) >= 3 {
-			system.X = data.Center[0]
-			system.Y = data.Center[1]
-			system.Z = data.Center[2]
+		// Extract coordinates from position object
+		if data.Position != nil {
+			system.X = data.Position.X
+			system.Y = data.Position.Y
+			system.Z = data.Position.Z
 		}
 
-		// Extract min coordinates
-		if len(data.Min) >= 3 {
-			system.XMin = data.Min[0]
-			system.YMin = data.Min[1]
-			system.ZMin = data.Min[2]
-		}
-
-		// Extract max coordinates
-		if len(data.Max) >= 3 {
-			system.XMax = data.Max[0]
-			system.YMax = data.Max[1]
-			system.ZMax = data.Max[2]
-		}
+		// Note: Min/Max coordinates are not available in new SDE format
 
 		systems = append(systems, system)
 	}

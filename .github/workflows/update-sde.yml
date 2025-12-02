@@ -16,8 +16,8 @@ env:
   # Fork of wanderer - PRs created here, then manually PR to upstream
   WANDERER_REPO: guarzo/wanderer
   UPSTREAM_REPO: wanderer-industries/wanderer
-  # SDE data goes to a new dedicated directory (not priv/repo/data which has other JSON files)
-  SDE_PATH: priv/repo/sde
+  # SDE CSV files go to priv/repo/data (same location as existing JSON files, replacing Fuzzwork downloads)
+  SDE_PATH: priv/repo/data
 
 permissions:
   contents: write
@@ -150,7 +150,7 @@ jobs:
 
             ### Next Steps
             1. Merge this PR to your fork
-            2. Update Wanderer's data loading code to read from `${{ env.SDE_PATH }}/` instead of downloading from Fuzzwork
+            2. CSV files are now in `${{ env.SDE_PATH }}/` - the same location Wanderer's `eve_data_service.ex` expects
             3. Create a PR from `guarzo/wanderer` to `wanderer-industries/wanderer`
 
             ---

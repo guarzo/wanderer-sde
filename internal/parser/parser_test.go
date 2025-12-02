@@ -17,111 +17,72 @@ func createTestSDE(t *testing.T) string {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
 
-	// Create mapRegions.yaml with all CSV-required fields
+	// Create mapRegions.yaml with new SDE format (2025+)
 	regionsYAML := `10000002:
-  regionID: 10000002
   name:
     en: "The Forge"
-  center:
-    - -96538397329247680
-    - 68904722523889856
-    - 103886273221498080
-  min:
-    - -119981828753981280
-    - 51082867689971200
-    - 83802978749825024
-  max:
-    - -78571227912056240
-    - 81725399315079600
-    - 125006073936295840
+  position:
+    x: -96538397329247680
+    y: 68904722523889856
+    z: 103886273221498080
   factionID: 500001
+  nebulaID: 11806
+  wormholeClassID: 7
 10000001:
-  regionID: 10000001
   name:
     en: "Derelik"
-  center:
-    - -22292048624051248
-    - 75502104274173520
-    - 165604011665621600
-  min:
-    - -35621726949316008
-    - 56850199135892320
-    - 147693695765356576
-  max:
-    - -10218609437200896
-    - 98654011227095776
-    - 185048656553648224
+  position:
+    x: -22292048624051248
+    y: 75502104274173520
+    z: 165604011665621600
+  factionID: 500007
+  nebulaID: 11799
+  wormholeClassID: 7
 `
 	if err := os.WriteFile(filepath.Join(tmpDir, "mapRegions.yaml"), []byte(regionsYAML), 0644); err != nil {
 		t.Fatalf("failed to create mapRegions.yaml: %v", err)
 	}
 
-	// Create mapConstellations.yaml with all CSV-required fields
+	// Create mapConstellations.yaml with new SDE format (2025+)
 	constellationsYAML := `20000020:
-  constellationID: 20000020
   regionID: 10000002
   name:
     en: "Kimotoro"
-  center:
-    - -107314934797574880
-    - 65893634706137696
-    - 106631148888006560
-  min:
-    - -112568356215730720
-    - 59890899814478064
-    - 101233660082252784
-  max:
-    - -101234252619851840
-    - 69999369494757040
-    - 113156541695968224
+  position:
+    x: -107314934797574880
+    y: 65893634706137696
+    z: 106631148888006560
   factionID: 500001
   radius: 12345678901234.5
+  wormholeClassID: 7
 20000001:
-  constellationID: 20000001
   regionID: 10000001
   name:
     en: "Joas"
-  center:
-    - -26892617099116692
-    - 70892048824177140
-    - 153426871465893984
-  min:
-    - -32621726949316008
-    - 64850199135892320
-    - 147693695765356576
-  max:
-    - -20218609437200896
-    - 78654011227095776
-    - 160048656553648224
+  position:
+    x: -26892617099116692
+    y: 70892048824177140
+    z: 153426871465893984
   radius: 9876543210987.6
+  wormholeClassID: 7
 `
 	if err := os.WriteFile(filepath.Join(tmpDir, "mapConstellations.yaml"), []byte(constellationsYAML), 0644); err != nil {
 		t.Fatalf("failed to create mapConstellations.yaml: %v", err)
 	}
 
-	// Create mapSolarSystems.yaml with all CSV-required fields
+	// Create mapSolarSystems.yaml with new SDE format (2025+)
 	systemsYAML := `30000142:
-  solarSystemID: 30000142
   constellationID: 20000020
   regionID: 10000002
   name:
     en: "Jita"
-  security: 0.9459
+  securityStatus: 0.9459
   securityClass: B
-  sunTypeID: 6
-  wormholeClassID: 0
-  center:
-    - -129500988494612512
-    - 60552325055663632
-    - 116970681498498304
-  min:
-    - -129501988494612512
-    - 60551325055663632
-    - 116969681498498304
-  max:
-    - -129499988494612512
-    - 60553325055663632
-    - 116971681498498304
+  starID: 40000006
+  position:
+    x: -129500988494612512
+    y: 60552325055663632
+    z: 116970681498498304
   luminosity: 0.01575
   border: true
   fringe: false
@@ -130,29 +91,18 @@ func createTestSDE(t *testing.T) string {
   international: false
   regional: true
   radius: 3.35e+12
-  factionID: 500001
 30000001:
-  solarSystemID: 30000001
   constellationID: 20000001
   regionID: 10000001
   name:
     en: "Tanoo"
-  security: 0.8576
+  securityStatus: 0.8576
   securityClass: B1
-  sunTypeID: 7
-  wormholeClassID: 0
-  center:
-    - -23413628500306264
-    - 68096352988768256
-    - 149988050156945664
-  min:
-    - -23414628500306264
-    - 68095352988768256
-    - 149987050156945664
-  max:
-    - -23412628500306264
-    - 68097352988768256
-    - 149989050156945664
+  starID: 40000007
+  position:
+    x: -23413628500306264
+    y: 68096352988768256
+    z: 149988050156945664
   luminosity: 0.02145
   border: false
   fringe: true
@@ -162,18 +112,17 @@ func createTestSDE(t *testing.T) string {
   regional: false
   radius: 2.89e+12
 31000001:
-  solarSystemID: 31000001
   constellationID: 21000001
   regionID: 11000001
   name:
     en: "J123456"
-  security: -1.0
-  sunTypeID: 45041
+  securityStatus: -1.0
+  starID: 40045041
   wormholeClassID: 3
-  center:
-    - 0
-    - 0
-    - 0
+  position:
+    x: 0
+    y: 0
+    z: 0
   luminosity: 0.0
   radius: 1.0e+12
 `
@@ -718,7 +667,7 @@ func TestParser_RegionCoordinates(t *testing.T) {
 		t.Fatal("The Forge region not found")
 	}
 
-	// Verify center coordinates
+	// Verify position coordinates (new SDE format uses position object)
 	if theForge.x != -96538397329247680 {
 		t.Errorf("Expected X coordinate -96538397329247680, got %f", theForge.x)
 	}
@@ -729,15 +678,7 @@ func TestParser_RegionCoordinates(t *testing.T) {
 		t.Errorf("Expected Z coordinate 103886273221498080, got %f", theForge.z)
 	}
 
-	// Verify min coordinates
-	if theForge.xMin != -119981828753981280 {
-		t.Errorf("Expected XMin -119981828753981280, got %f", theForge.xMin)
-	}
-
-	// Verify max coordinates
-	if theForge.xMax != -78571227912056240 {
-		t.Errorf("Expected XMax -78571227912056240, got %f", theForge.xMax)
-	}
+	// Note: Min/Max coordinates are not available in new SDE format (2025+)
 
 	// Verify faction ID
 	if theForge.factionID == nil || *theForge.factionID != 500001 {
@@ -789,7 +730,7 @@ func TestParser_ConstellationCoordinates(t *testing.T) {
 		t.Fatal("Kimotoro constellation not found")
 	}
 
-	// Verify center coordinates
+	// Verify position coordinates (new SDE format)
 	if kimotoro.x != -107314934797574880 {
 		t.Errorf("Expected X coordinate -107314934797574880, got %f", kimotoro.x)
 	}
@@ -909,16 +850,11 @@ func TestParser_SolarSystemCSVFields(t *testing.T) {
 		t.Errorf("Expected constellationID 20000020, got %d", jita.constellationID)
 	}
 
-	// Verify coordinates
+	// Verify position coordinates (new SDE format)
 	if jita.x != -129500988494612512 {
 		t.Errorf("Expected X -129500988494612512, got %f", jita.x)
 	}
-	if jita.xMin != -129501988494612512 {
-		t.Errorf("Expected XMin -129501988494612512, got %f", jita.xMin)
-	}
-	if jita.xMax != -129499988494612512 {
-		t.Errorf("Expected XMax -129499988494612512, got %f", jita.xMax)
-	}
+	// Note: Min/Max coordinates are not available in new SDE format (2025+)
 
 	// Verify boolean flags
 	if !jita.border {
@@ -955,11 +891,10 @@ func TestParser_SolarSystemCSVFields(t *testing.T) {
 	if jita.securityClass != "B" {
 		t.Errorf("Expected securityClass 'B', got %q", jita.securityClass)
 	}
-	if jita.factionID == nil || *jita.factionID != 500001 {
-		t.Error("Expected factionID 500001")
-	}
-	if jita.sunTypeID == nil || *jita.sunTypeID != 6 {
-		t.Error("Expected sunTypeID 6")
+	// Note: factionID is not present on systems in new SDE format - propagated from region
+	// sunTypeID in new format is starID (the star entity ID, not the type ID)
+	if jita.sunTypeID == nil || *jita.sunTypeID != 40000006 {
+		t.Errorf("Expected sunTypeID (starID) 40000006, got %v", jita.sunTypeID)
 	}
 }
 

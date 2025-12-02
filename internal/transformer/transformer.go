@@ -95,15 +95,12 @@ func (t *Transformer) Transform(parseResult *parser.ParseResult) (*models.Conver
 	return result, nil
 }
 
-// transformSolarSystems applies security calculation to solar systems while preserving all fields.
+// transformSolarSystems sorts solar systems while preserving all fields.
+// Note: We output raw security values (not rounded) because Wanderer calculates
+// true security itself from the raw value.
 func (t *Transformer) transformSolarSystems(systems []models.SolarSystem) []models.SolarSystem {
 	result := make([]models.SolarSystem, len(systems))
-
-	for i, sys := range systems {
-		// Copy all fields, applying security transformation
-		result[i] = sys
-		result[i].Security = GetTrueSecurity(sys.Security)
-	}
+	copy(result, systems)
 
 	// Sort by system ID for consistent output
 	sort.Slice(result, func(i, j int) bool {
