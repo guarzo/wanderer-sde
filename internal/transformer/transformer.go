@@ -69,6 +69,23 @@ func (t *Transformer) Transform(parseResult *parser.ParseResult) (*models.Conver
 	}
 	systemJumps := t.transformSystemJumps(parseResult.SystemJumps, systems)
 
+	// Calculate bounds for regions and constellations from constituent systems
+	if t.config.Verbose {
+		fmt.Println("  Calculating region bounds...")
+	}
+	CalculateRegionBounds(regions, systems)
+
+	if t.config.Verbose {
+		fmt.Println("  Calculating constellation bounds...")
+	}
+	CalculateConstellationBounds(constellations, systems)
+
+	// Inherit factionID from region for systems that don't have one
+	if t.config.Verbose {
+		fmt.Println("  Inheriting faction IDs...")
+	}
+	InheritFactionIDs(systems, regions)
+
 	result := &models.ConvertedData{
 		Universe: &models.UniverseData{
 			Regions:        regions,
@@ -262,11 +279,12 @@ func (t *Transformer) Validate(data *models.ConvertedData) *models.ValidationRes
 
 	// Validation thresholds based on known EVE universe size
 	const (
-		minSolarSystems   = 8000
-		minRegions        = 100
-		minConstellations = 1000
-		minTypes          = 30000 // All types, not just ships
-		minSystemJumps    = 10000
+		minSolarSystems    = 8000
+		minRegions         = 100
+		minConstellations  = 1000
+		minTypes           = 30000 // All types, not just ships
+		minSystemJumps     = 13000 // Bidirectional jumps (A→B and B→A), expected ~13,776
+		minWormholeClasses = 750   // Regions + constellations + systems, expected ~803
 	)
 
 	// Check minimum counts
@@ -298,6 +316,12 @@ func (t *Transformer) Validate(data *models.ConvertedData) *models.ValidationRes
 		result.Warnings = append(result.Warnings,
 			fmt.Sprintf("System jump count (%d) is below expected minimum (%d)",
 				result.SystemJumps, minSystemJumps))
+	}
+
+	if result.WormholeClasses < minWormholeClasses {
+		result.Warnings = append(result.Warnings,
+			fmt.Sprintf("Wormhole class count (%d) is below expected minimum (%d)",
+				result.WormholeClasses, minWormholeClasses))
 	}
 
 	// Check for empty required data

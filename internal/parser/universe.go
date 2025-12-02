@@ -17,14 +17,14 @@ type SDEPosition struct {
 
 // SDEMapRegion represents a region in the flat SDE format.
 type SDEMapRegion struct {
-	RegionID         int64             `yaml:"regionID"`
-	Name             map[string]string `yaml:"name"`
-	NameID           int64             `yaml:"nameID,omitempty"`
-	DescriptionID    int64             `yaml:"descriptionID,omitempty"`
-	FactionID        int64             `yaml:"factionID,omitempty"`
-	Position         *SDEPosition      `yaml:"position,omitempty"`
-	NebulaID         int64             `yaml:"nebulaID,omitempty"`
-	WormholeClassID  int64             `yaml:"wormholeClassID,omitempty"`
+	RegionID        int64             `yaml:"regionID"`
+	Name            map[string]string `yaml:"name"`
+	NameID          int64             `yaml:"nameID,omitempty"`
+	DescriptionID   int64             `yaml:"descriptionID,omitempty"`
+	FactionID       int64             `yaml:"factionID,omitempty"`
+	Position        *SDEPosition      `yaml:"position,omitempty"`
+	NebulaID        int64             `yaml:"nebulaID,omitempty"`
+	WormholeClassID int64             `yaml:"wormholeClassID,omitempty"`
 }
 
 // SDEMapConstellation represents a constellation in the flat SDE format.
@@ -154,7 +154,8 @@ func (p *Parser) ParseConstellations() ([]models.Constellation, error) {
 }
 
 // ParseSolarSystems parses the mapSolarSystems.yaml file.
-func (p *Parser) ParseSolarSystems() ([]models.SolarSystem, error) {
+// starTypeMap provides starID -> typeID mapping for resolving sun types.
+func (p *Parser) ParseSolarSystems(starTypeMap map[int64]int64) ([]models.SolarSystem, error) {
 	path := p.filePath("mapSolarSystems.yaml")
 
 	// Parse the file as a map of system ID to system data
@@ -168,6 +169,14 @@ func (p *Parser) ParseSolarSystems() ([]models.SolarSystem, error) {
 		name := data.Name["en"]
 		if name == "" {
 			name = fmt.Sprintf("System %d", id)
+		}
+
+		// Resolve sun type ID from star ID using the provided map
+		var sunTypeID *int64
+		if data.StarID != 0 && starTypeMap != nil {
+			if typeID, ok := starTypeMap[data.StarID]; ok {
+				sunTypeID = models.Int64PtrAlways(typeID)
+			}
 		}
 
 		system := models.SolarSystem{
@@ -186,7 +195,7 @@ func (p *Parser) ParseSolarSystems() ([]models.SolarSystem, error) {
 			Security:        data.SecurityStatus,
 			FactionID:       models.Int64Ptr(data.FactionID),
 			Radius:          data.Radius,
-			SunTypeID:       models.Int64Ptr(data.StarID),
+			SunTypeID:       sunTypeID,
 			SecurityClass:   data.SecurityClass,
 		}
 
@@ -208,33 +217,4 @@ func (p *Parser) ParseSolarSystems() ([]models.SolarSystem, error) {
 	})
 
 	return systems, nil
-}
-
-// ExtractWormholeClasses extracts wormhole class information from solar systems.
-// In the new SDE format, wormhole class is stored directly on the solar system.
-func (p *Parser) ExtractWormholeClasses(systems []models.SolarSystem) []models.WormholeClassLocation {
-	// Re-parse systems to get wormhole class info (not stored in Wanderer model)
-	path := p.filePath("mapSolarSystems.yaml")
-	rawSystems, err := yaml.ParseFileMap[int64, SDEMapSolarSystem](path)
-	if err != nil {
-		// If we can't parse, return empty slice
-		return nil
-	}
-
-	var wormholeClasses []models.WormholeClassLocation
-	for id, data := range rawSystems {
-		if data.WormholeClassID != 0 {
-			wormholeClasses = append(wormholeClasses, models.WormholeClassLocation{
-				LocationID:      id,
-				WormholeClassID: data.WormholeClassID,
-			})
-		}
-	}
-
-	// Sort by location ID for consistent output
-	sort.Slice(wormholeClasses, func(i, j int) bool {
-		return wormholeClasses[i].LocationID < wormholeClasses[j].LocationID
-	})
-
-	return wormholeClasses
 }

@@ -22,6 +22,8 @@ type SDEMapStargate struct {
 }
 
 // ParseStargates parses the mapStargates.yaml file and extracts system jumps.
+// Both directions of each stargate connection are included (A→B and B→A)
+// to match Fuzzwork CSV format.
 func (p *Parser) ParseStargates() ([]models.SystemJump, error) {
 	path := p.filePath("mapStargates.yaml")
 
@@ -31,8 +33,7 @@ func (p *Parser) ParseStargates() ([]models.SystemJump, error) {
 		return nil, fmt.Errorf("failed to parse stargates file: %w", err)
 	}
 
-	// Create unique jump pairs (only count each connection once)
-	// Use a map to deduplicate - store with smaller ID first
+	// Use a map to deduplicate identical A→B entries (but keep A→B and B→A as separate)
 	jumpSet := make(map[[2]int64]struct{})
 
 	for _, data := range rawStargates {
@@ -44,13 +45,8 @@ func (p *Parser) ParseStargates() ([]models.SystemJump, error) {
 			continue
 		}
 
-		// Create ordered pair (smaller ID first) to avoid duplicates
-		var pair [2]int64
-		if fromSystem < toSystem {
-			pair = [2]int64{fromSystem, toSystem}
-		} else {
-			pair = [2]int64{toSystem, fromSystem}
-		}
+		// Store the jump as-is (preserving direction from stargate)
+		pair := [2]int64{fromSystem, toSystem}
 		jumpSet[pair] = struct{}{}
 	}
 

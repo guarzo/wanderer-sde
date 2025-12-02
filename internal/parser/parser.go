@@ -93,11 +93,20 @@ func (p *Parser) ParseAll() (*ParseResult, error) {
 	}
 	result.Constellations = constellations
 
-	// Parse solar systems
+	// Parse stars (needed for solar system sun type resolution)
+	if p.config.Verbose {
+		fmt.Println("  Parsing stars...")
+	}
+	starTypeMap, err := p.ParseStars()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse stars: %w", err)
+	}
+
+	// Parse solar systems with star type lookup
 	if p.config.Verbose {
 		fmt.Println("  Parsing solar systems...")
 	}
-	systems, err := p.ParseSolarSystems()
+	systems, err := p.ParseSolarSystems(starTypeMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse solar systems: %w", err)
 	}
@@ -113,11 +122,15 @@ func (p *Parser) ParseAll() (*ParseResult, error) {
 	}
 	result.SystemJumps = jumps
 
-	// Extract wormhole classes from systems and regions
+	// Extract wormhole classes from regions, constellations, and systems
 	if p.config.Verbose {
 		fmt.Println("  Extracting wormhole classes...")
 	}
-	result.WormholeClasses = p.ExtractWormholeClasses(systems)
+	wormholeClasses, err := p.ExtractAllWormholeClasses()
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract wormhole classes: %w", err)
+	}
+	result.WormholeClasses = wormholeClasses
 
 	if p.config.Verbose {
 		fmt.Printf("Parsing complete:\n")

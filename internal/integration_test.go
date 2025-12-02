@@ -266,6 +266,36 @@ func createTestSDE(t *testing.T) string {
 		t.Fatalf("failed to create categories.yaml: %v", err)
 	}
 
+	// Create mapStars.yaml with star ID -> type ID mapping
+	starsYAML := `40000006:
+  solarSystemID: 30000142
+  typeID: 3796
+  radius: 123456789.0
+40000007:
+  solarSystemID: 30000001
+  typeID: 3797
+  radius: 987654321.0
+40000008:
+  solarSystemID: 30000144
+  typeID: 3798
+  radius: 111111111.0
+40000009:
+  solarSystemID: 30000145
+  typeID: 3799
+  radius: 222222222.0
+40000010:
+  solarSystemID: 30000146
+  typeID: 3800
+  radius: 333333333.0
+40045041:
+  solarSystemID: 31000001
+  typeID: 45041
+  radius: 444444444.0
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "mapStars.yaml"), []byte(starsYAML), 0644); err != nil {
+		t.Fatalf("failed to create mapStars.yaml: %v", err)
+	}
+
 	return tmpDir
 }
 
@@ -315,9 +345,9 @@ func TestIntegration_FullPipeline(t *testing.T) {
 		if len(parseResult.Categories) != 2 {
 			t.Errorf("Expected 2 categories, got %d", len(parseResult.Categories))
 		}
-		// 3 unique stargate connections (bidirectional pairs)
-		if len(parseResult.SystemJumps) != 3 {
-			t.Errorf("Expected 3 system jumps, got %d", len(parseResult.SystemJumps))
+		// 6 system jumps (3 stargate connections × 2 directions each)
+		if len(parseResult.SystemJumps) != 6 {
+			t.Errorf("Expected 6 system jumps (bidirectional), got %d", len(parseResult.SystemJumps))
 		}
 	})
 

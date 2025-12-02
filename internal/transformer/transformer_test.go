@@ -144,8 +144,8 @@ func TestTransformer_Validate(t *testing.T) {
 				},
 				InvTypes:        make([]models.InvType, 35000),
 				InvGroups:       make([]models.InvGroup, 50),
-				WormholeClasses: make([]models.WormholeClassLocation, 100),
-				SystemJumps:     make([]models.SystemJump, 11000),
+				WormholeClasses: make([]models.WormholeClassLocation, 800), // Regions + constellations + systems, expected ~803
+				SystemJumps:     make([]models.SystemJump, 14000),          // Bidirectional jumps, expected ~13,776
 			},
 			expectErrors:   false,
 			expectWarnings: false,

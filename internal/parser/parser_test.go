@@ -240,6 +240,24 @@ func createTestSDE(t *testing.T) string {
 		t.Fatalf("failed to create categories.yaml: %v", err)
 	}
 
+	// Create mapStars.yaml with star ID -> type ID mapping
+	starsYAML := `40000006:
+  solarSystemID: 30000142
+  typeID: 3796
+  radius: 123456789.0
+40000007:
+  solarSystemID: 30000001
+  typeID: 3797
+  radius: 987654321.0
+40045041:
+  solarSystemID: 31000001
+  typeID: 45041
+  radius: 111222333.0
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "mapStars.yaml"), []byte(starsYAML), 0644); err != nil {
+		t.Fatalf("failed to create mapStars.yaml: %v", err)
+	}
+
 	return tmpDir
 }
 
@@ -313,7 +331,13 @@ func TestParser_ParseSolarSystems(t *testing.T) {
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
 
-	systems, err := p.ParseSolarSystems()
+	// Parse stars first to get the type map
+	starTypeMap, err := p.ParseStars()
+	if err != nil {
+		t.Fatalf("ParseStars failed: %v", err)
+	}
+
+	systems, err := p.ParseSolarSystems(starTypeMap)
 	if err != nil {
 		t.Fatalf("ParseSolarSystems failed: %v", err)
 	}
@@ -362,6 +386,79 @@ func TestParser_ParseSolarSystems(t *testing.T) {
 	if jita.security < 0.9 || jita.security > 1.0 {
 		t.Errorf("Jita security value unexpected: %f", jita.security)
 	}
+
+	// Verify sunTypeID is now the type ID (3796) not the star ID (40000006)
+	if jita.sunType != 3796 {
+		t.Errorf("Expected Jita sunTypeID to be 3796 (type ID), got %d", jita.sunType)
+	}
+}
+
+func TestParser_ParseStars(t *testing.T) {
+	tmpDir := createTestSDE(t)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	cfg := &config.Config{Verbose: false}
+	p := New(cfg, tmpDir)
+
+	starTypeMap, err := p.ParseStars()
+	if err != nil {
+		t.Fatalf("ParseStars failed: %v", err)
+	}
+
+	// Verify correct number of stars parsed
+	if len(starTypeMap) != 3 {
+		t.Errorf("Expected 3 stars, got %d", len(starTypeMap))
+	}
+
+	// Verify Jita's star (40000006) maps to type 3796
+	if typeID, ok := starTypeMap[40000006]; !ok {
+		t.Error("Star 40000006 not found in map")
+	} else if typeID != 3796 {
+		t.Errorf("Expected star 40000006 to have typeID 3796, got %d", typeID)
+	}
+
+	// Verify Tanoo's star (40000007) maps to type 3797
+	if typeID, ok := starTypeMap[40000007]; !ok {
+		t.Error("Star 40000007 not found in map")
+	} else if typeID != 3797 {
+		t.Errorf("Expected star 40000007 to have typeID 3797, got %d", typeID)
+	}
+
+	// Verify wormhole star (40045041) maps to type 45041
+	if typeID, ok := starTypeMap[40045041]; !ok {
+		t.Error("Star 40045041 not found in map")
+	} else if typeID != 45041 {
+		t.Errorf("Expected star 40045041 to have typeID 45041, got %d", typeID)
+	}
+}
+
+func TestParser_ParseSolarSystemsWithNilStarMap(t *testing.T) {
+	tmpDir := createTestSDE(t)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	cfg := &config.Config{Verbose: false}
+	p := New(cfg, tmpDir)
+
+	// Parse with nil star map - should still work but sunTypeID will be nil
+	systems, err := p.ParseSolarSystems(nil)
+	if err != nil {
+		t.Fatalf("ParseSolarSystems failed: %v", err)
+	}
+
+	if len(systems) != 3 {
+		t.Errorf("Expected 3 solar systems, got %d", len(systems))
+	}
+
+	// Find Jita and verify sunTypeID is nil when no star map provided
+	for _, s := range systems {
+		if s.SolarSystemName == "Jita" {
+			if s.SunTypeID != nil {
+				t.Errorf("Expected Jita sunTypeID to be nil without star map, got %v", *s.SunTypeID)
+			}
+			return
+		}
+	}
+	t.Fatal("Jita not found in parsed systems")
 }
 
 func TestParser_ParseStargates(t *testing.T) {
@@ -376,18 +473,29 @@ func TestParser_ParseStargates(t *testing.T) {
 		t.Fatalf("ParseStargates failed: %v", err)
 	}
 
-	// Two stargates in both directions should result in 1 unique jump
-	if len(jumps) != 1 {
-		t.Errorf("Expected 1 unique jump (deduped from bidirectional stargates), got %d", len(jumps))
+	// Two stargates in both directions should result in 2 jumps (A→B and B→A)
+	// This matches Fuzzwork CSV format where both directions are included
+	if len(jumps) != 2 {
+		t.Errorf("Expected 2 jumps (bidirectional), got %d", len(jumps))
 	}
 
-	// Verify the jump (smaller ID should be first)
-	if len(jumps) > 0 {
-		jump := jumps[0]
-		if jump.FromSolarSystemID != 30000001 || jump.ToSolarSystemID != 30000142 {
-			t.Errorf("Expected jump from 30000001 to 30000142, got %d to %d",
-				jump.FromSolarSystemID, jump.ToSolarSystemID)
+	// Verify both directions exist
+	foundJitaToTanoo := false
+	foundTanooToJita := false
+	for _, jump := range jumps {
+		if jump.FromSolarSystemID == 30000142 && jump.ToSolarSystemID == 30000001 {
+			foundJitaToTanoo = true
 		}
+		if jump.FromSolarSystemID == 30000001 && jump.ToSolarSystemID == 30000142 {
+			foundTanooToJita = true
+		}
+	}
+
+	if !foundJitaToTanoo {
+		t.Error("Expected jump from Jita (30000142) to Tanoo (30000001)")
+	}
+	if !foundTanooToJita {
+		t.Error("Expected jump from Tanoo (30000001) to Jita (30000142)")
 	}
 }
 
@@ -484,36 +592,38 @@ func TestParser_ParseCategories(t *testing.T) {
 	}
 }
 
-func TestParser_ExtractWormholeClasses(t *testing.T) {
+func TestParser_ExtractAllWormholeClasses(t *testing.T) {
 	tmpDir := createTestSDE(t)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
 
-	// First parse solar systems
-	systems, err := p.ParseSolarSystems()
+	wormholeClasses, err := p.ExtractAllWormholeClasses()
 	if err != nil {
-		t.Fatalf("ParseSolarSystems failed: %v", err)
+		t.Fatalf("ExtractAllWormholeClasses failed: %v", err)
 	}
 
-	wormholeClasses := p.ExtractWormholeClasses(systems)
-
-	// Only the wormhole system (J123456) should have a non-zero wormhole class
-	expectedWHCount := 1
+	// Test data has wormhole classes on:
+	// - 2 regions with wormholeClassID 7 (The Forge: 10000002, Derelik: 10000001)
+	// - 2 constellations with wormholeClassID 7 (Kimotoro: 20000020, Joas: 20000001)
+	// - 1 solar system with wormholeClassID 3 (J123456: 31000001)
+	// Total: 5 entries
+	expectedWHCount := 5
 	if len(wormholeClasses) != expectedWHCount {
-		t.Errorf("Expected %d wormhole class entries, got %d", expectedWHCount, len(wormholeClasses))
+		t.Errorf("Expected %d wormhole class entries (regions + constellations + systems), got %d", expectedWHCount, len(wormholeClasses))
 	}
 
-	// Verify the wormhole class entry
-	if len(wormholeClasses) > 0 {
-		wh := wormholeClasses[0]
-		if wh.LocationID != 31000001 {
-			t.Errorf("Expected wormhole location ID 31000001, got %d", wh.LocationID)
+	// Verify the wormhole system entry is present
+	foundWormholeSystem := false
+	for _, wh := range wormholeClasses {
+		if wh.LocationID == 31000001 && wh.WormholeClassID == 3 {
+			foundWormholeSystem = true
+			break
 		}
-		if wh.WormholeClassID != 3 {
-			t.Errorf("Expected wormhole class ID 3, got %d", wh.WormholeClassID)
-		}
+	}
+	if !foundWormholeSystem {
+		t.Error("Expected wormhole system J123456 (31000001) with class 3 not found")
 	}
 }
 
@@ -754,7 +864,13 @@ func TestParser_SolarSystemCSVFields(t *testing.T) {
 	cfg := &config.Config{Verbose: false}
 	p := New(cfg, tmpDir)
 
-	systems, err := p.ParseSolarSystems()
+	// Parse stars first
+	starTypeMap, err := p.ParseStars()
+	if err != nil {
+		t.Fatalf("ParseStars failed: %v", err)
+	}
+
+	systems, err := p.ParseSolarSystems(starTypeMap)
 	if err != nil {
 		t.Fatalf("ParseSolarSystems failed: %v", err)
 	}
@@ -892,9 +1008,9 @@ func TestParser_SolarSystemCSVFields(t *testing.T) {
 		t.Errorf("Expected securityClass 'B', got %q", jita.securityClass)
 	}
 	// Note: factionID is not present on systems in new SDE format - propagated from region
-	// sunTypeID in new format is starID (the star entity ID, not the type ID)
-	if jita.sunTypeID == nil || *jita.sunTypeID != 40000006 {
-		t.Errorf("Expected sunTypeID (starID) 40000006, got %v", jita.sunTypeID)
+	// sunTypeID is now resolved to the actual type ID via star parsing
+	if jita.sunTypeID == nil || *jita.sunTypeID != 3796 {
+		t.Errorf("Expected sunTypeID 3796 (resolved from starID 40000006), got %v", jita.sunTypeID)
 	}
 }
 
