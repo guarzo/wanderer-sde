@@ -240,28 +240,9 @@ func TestCSVWriter_SolarSystemRow(t *testing.T) {
 			RegionID:        10000002,
 			ConstellationID: 20000020,
 			SolarSystemName: "Jita",
-			X:               -129483428307508224,
-			Y:               60654338355159040,
-			Z:               -79015917355671552,
-			XMin:            -129500000000000000,
-			XMax:            -129400000000000000,
-			YMin:            60600000000000000,
-			YMax:            60700000000000000,
-			ZMin:            -79100000000000000,
-			ZMax:            -78900000000000000,
-			Luminosity:      0.01575,
-			Border:          false,
-			Fringe:          false,
-			Corridor:        false,
-			Hub:             true,
-			International:   false,
-			Regional:        false,
-			Constellation:   "None",
 			Security:        0.9459131166648389,
 			FactionID:       &factionID,
-			Radius:          2838370304000,
 			SunTypeID:       &sunTypeID,
-			SecurityClass:   "B",
 		},
 	}
 
@@ -288,27 +269,18 @@ func TestCSVWriter_SolarSystemRow(t *testing.T) {
 
 	row := records[1]
 
-	// Check specific column values
-	// Headers: regionID(0), constellationID(1), solarSystemID(2), solarSystemName(3),
-	// x(4), y(5), z(6), xMin(7), xMax(8), yMin(9), yMax(10), zMin(11), zMax(12),
-	// luminosity(13), border(14), fringe(15), corridor(16), hub(17), international(18),
-	// regional(19), constellation(20), security(21), factionID(22), radius(23),
-	// sunTypeID(24), securityClass(25)
+	// Slimmed down headers: solarSystemID(0), solarSystemName(1), regionID(2),
+	// constellationID(3), security(4), sunTypeID(5)
 	tests := []struct {
 		index    int
 		name     string
 		expected string
 	}{
-		{0, "regionID", "10000002"},
-		{1, "constellationID", "20000020"},
-		{2, "solarSystemID", "30000142"},
-		{3, "solarSystemName", "Jita"},
-		{17, "hub", "1"},    // Hub should be 1
-		{14, "border", "0"}, // Border should be 0
-		{20, "constellation", "None"},
-		{22, "factionID", "500001"},
-		{24, "sunTypeID", "6"},
-		{25, "securityClass", "B"},
+		{0, "solarSystemID", "30000142"},
+		{1, "solarSystemName", "Jita"},
+		{2, "regionID", "10000002"},
+		{3, "constellationID", "20000020"},
+		{5, "sunTypeID", "6"},
 	}
 
 	for _, tt := range tests {
@@ -340,11 +312,8 @@ func TestCSVWriter_NullHandling(t *testing.T) {
 			RegionID:        10000002,
 			ConstellationID: 20000020,
 			SolarSystemName: "Test",
-			Constellation:   "None",
 			Security:        0.5,
-			FactionID:       nil, // Should output "None"
 			SunTypeID:       nil, // Should output "None"
-			SecurityClass:   "",
 		},
 	}
 
@@ -366,14 +335,9 @@ func TestCSVWriter_NullHandling(t *testing.T) {
 
 	row := records[1]
 
-	// factionID at index 22 should be "None"
-	if row[22] != "None" {
-		t.Errorf("factionID: got %s, expected None", row[22])
-	}
-
-	// sunTypeID at index 24 should be "None"
-	if row[24] != "None" {
-		t.Errorf("sunTypeID: got %s, expected None", row[24])
+	// sunTypeID at index 5 should be "None"
+	if row[5] != "None" {
+		t.Errorf("sunTypeID: got %s, expected None", row[5])
 	}
 }
 
@@ -588,23 +552,10 @@ func TestCSVWriter_RegionRow(t *testing.T) {
 
 	w := NewCSVWriter(cfg)
 
-	factionID := int64(500001)
 	regions := []models.Region{
 		{
 			RegionID:   10000002,
 			RegionName: "The Forge",
-			X:          -96538765063520384,
-			Y:          60376779980673024,
-			Z:          112361271557498880,
-			XMin:       -119406988656885760,
-			XMax:       -73670541470154752,
-			YMin:       42907838618230784,
-			YMax:       77845721343115264,
-			ZMin:       97540122286497792,
-			ZMax:       127182420828499968,
-			FactionID:  &factionID,
-			Nebula:     11,
-			Radius:     0,
 		},
 	}
 
@@ -629,7 +580,7 @@ func TestCSVWriter_RegionRow(t *testing.T) {
 	}
 
 	row := records[1]
-	// Verify column values
+	// Slimmed down: regionID(0), regionName(1)
 	tests := []struct {
 		index    int
 		name     string
@@ -637,8 +588,6 @@ func TestCSVWriter_RegionRow(t *testing.T) {
 	}{
 		{0, "regionID", "10000002"},
 		{1, "regionName", "The Forge"},
-		{11, "factionID", "500001"},
-		{12, "nebula", "11"},
 	}
 
 	for _, tt := range tests {
@@ -663,23 +612,11 @@ func TestCSVWriter_ConstellationRow(t *testing.T) {
 
 	w := NewCSVWriter(cfg)
 
-	factionID := int64(500001)
 	constellations := []models.Constellation{
 		{
 			ConstellationID:   20000020,
 			ConstellationName: "Kimotoro",
 			RegionID:          10000002,
-			X:                 -90032979768340480,
-			Y:                 44587085903659008,
-			Z:                 115019533039984640,
-			XMin:              -96605073106452480,
-			XMax:              -83460886430228480,
-			YMin:              42907838618230784,
-			YMax:              46266333189087232,
-			ZMin:              109413671420215296,
-			ZMax:              120625394659753984,
-			FactionID:         &factionID,
-			Radius:            6500000000000,
 		},
 	}
 
@@ -704,16 +641,14 @@ func TestCSVWriter_ConstellationRow(t *testing.T) {
 	}
 
 	row := records[1]
+	// Slimmed down: constellationID(0), constellationName(1)
 	tests := []struct {
 		index    int
 		name     string
 		expected string
 	}{
-		{0, "regionID", "10000002"},
-		{1, "constellationID", "20000020"},
-		{2, "constellationName", "Kimotoro"},
-		{12, "factionID", "500001"},
-		{13, "radius", "6500000000000"},
+		{0, "constellationID", "20000020"},
+		{1, "constellationName", "Kimotoro"},
 	}
 
 	for _, tt := range tests {
@@ -738,25 +673,14 @@ func TestCSVWriter_TypeRow(t *testing.T) {
 
 	w := NewCSVWriter(cfg)
 
-	raceID := int64(2)
-	marketGroupID := int64(64)
 	types := []models.InvType{
 		{
-			TypeID:        587,
-			GroupID:       25,
-			TypeName:      "Rifter",
-			Description:   "The Rifter is a very fast frigate.",
-			Mass:          1350000,
-			Volume:        27500,
-			Capacity:      125,
-			PortionSize:   1,
-			RaceID:        &raceID,
-			BasePrice:     25000,
-			Published:     true,
-			MarketGroupID: &marketGroupID,
-			IconID:        nil,
-			SoundID:       nil,
-			GraphicID:     nil,
+			TypeID:   587,
+			GroupID:  25,
+			TypeName: "Rifter",
+			Mass:     1350000,
+			Volume:   27500,
+			Capacity: 125,
 		},
 	}
 
@@ -781,6 +705,7 @@ func TestCSVWriter_TypeRow(t *testing.T) {
 	}
 
 	row := records[1]
+	// Slimmed down: typeID(0), groupID(1), typeName(2), mass(3), volume(4), capacity(5)
 	tests := []struct {
 		index    int
 		name     string
@@ -789,14 +714,9 @@ func TestCSVWriter_TypeRow(t *testing.T) {
 		{0, "typeID", "587"},
 		{1, "groupID", "25"},
 		{2, "typeName", "Rifter"},
-		{3, "description", "The Rifter is a very fast frigate."},
-		{4, "mass", "1350000"},
-		{7, "portionSize", "1"},
-		{8, "raceID", "2"},
-		{9, "basePrice", "25000"},
-		{10, "published", "1"},
-		{11, "marketGroupID", "64"},
-		{12, "iconID", "None"},
+		{3, "mass", "1350000"},
+		{4, "volume", "27500"},
+		{5, "capacity", "125"},
 	}
 
 	for _, tt := range tests {
@@ -821,18 +741,11 @@ func TestCSVWriter_GroupRow(t *testing.T) {
 
 	w := NewCSVWriter(cfg)
 
-	iconID := int64(1234)
 	groups := []models.InvGroup{
 		{
-			GroupID:              25,
-			CategoryID:           6,
-			GroupName:            "Frigate",
-			IconID:               &iconID,
-			UseBasePrice:         true,
-			Anchored:             false,
-			Anchorable:           false,
-			FittableNonSingleton: true,
-			Published:            true,
+			GroupID:    25,
+			CategoryID: 6,
+			GroupName:  "Frigate",
 		},
 	}
 
@@ -857,6 +770,7 @@ func TestCSVWriter_GroupRow(t *testing.T) {
 	}
 
 	row := records[1]
+	// Slimmed down: groupID(0), categoryID(1), groupName(2)
 	tests := []struct {
 		index    int
 		name     string
@@ -865,12 +779,6 @@ func TestCSVWriter_GroupRow(t *testing.T) {
 		{0, "groupID", "25"},
 		{1, "categoryID", "6"},
 		{2, "groupName", "Frigate"},
-		{3, "iconID", "1234"},
-		{4, "useBasePrice", "1"},
-		{5, "anchored", "0"},
-		{6, "anchorable", "0"},
-		{7, "fittableNonSingleton", "1"},
-		{8, "published", "1"},
 	}
 
 	for _, tt := range tests {
@@ -927,17 +835,14 @@ func TestCSVWriter_SystemJumpRow(t *testing.T) {
 	}
 
 	row := records[1]
+	// Slimmed down: fromSolarSystemID(0), toSolarSystemID(1)
 	tests := []struct {
 		index    int
 		name     string
 		expected string
 	}{
-		{0, "fromRegionID", "10000002"},
-		{1, "fromConstellationID", "20000020"},
-		{2, "fromSolarSystemID", "30000142"},
-		{3, "toSolarSystemID", "30000144"},
-		{4, "toConstellationID", "20000020"},
-		{5, "toRegionID", "10000002"},
+		{0, "fromSolarSystemID", "30000142"},
+		{1, "toSolarSystemID", "30000144"},
 	}
 
 	for _, tt := range tests {

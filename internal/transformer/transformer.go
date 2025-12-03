@@ -45,17 +45,17 @@ func (t *Transformer) Transform(parseResult *parser.ParseResult) (*models.Conver
 	}
 	constellations := t.sortConstellations(parseResult.Constellations)
 
-	// Transform all types
+	// Transform groups (filter to ships only - category 6)
 	if t.config.Verbose {
-		fmt.Println("  Transforming types...")
+		fmt.Println("  Transforming groups (ships only)...")
 	}
-	invTypes := t.transformTypes(parseResult.Types)
+	invGroups := t.transformShipGroups(parseResult.Groups)
 
-	// Transform all groups
+	// Transform types (filter to ships only - groups with category 6)
 	if t.config.Verbose {
-		fmt.Println("  Transforming groups...")
+		fmt.Println("  Transforming types (ships only)...")
 	}
-	invGroups := t.transformGroups(parseResult.Groups)
+	invTypes := t.transformShipTypes(parseResult.Types, parseResult.Groups)
 
 	// Sort wormhole classes for consistent output
 	if t.config.Verbose {
@@ -163,27 +163,32 @@ func (t *Transformer) sortWormholeClasses(classes []models.WormholeClassLocation
 	return result
 }
 
-// transformTypes converts SDE types to InvType format.
-func (t *Transformer) transformTypes(types map[int64]models.SDEType) []models.InvType {
-	result := make([]models.InvType, 0, len(types))
+// transformShipTypes converts SDE types to InvType format, filtering to ships only.
+// Ships are types whose groupID belongs to a group with categoryID == 6.
+func (t *Transformer) transformShipTypes(types map[int64]models.SDEType, groups map[int64]models.SDEGroup) []models.InvType {
+	// Build set of ship group IDs
+	shipGroupIDs := make(map[int64]bool)
+	for groupID, group := range groups {
+		if group.CategoryID == ShipCategoryID {
+			shipGroupIDs[groupID] = true
+		}
+	}
+
+	result := make([]models.InvType, 0)
 
 	for typeID, sdeType := range types {
+		// Only include types that belong to ship groups
+		if !shipGroupIDs[sdeType.GroupID] {
+			continue
+		}
+
 		invType := models.InvType{
-			TypeID:        typeID,
-			GroupID:       sdeType.GroupID,
-			TypeName:      sdeType.Name["en"],
-			Description:   sdeType.Description["en"],
-			Mass:          sdeType.Mass,
-			Volume:        sdeType.Volume,
-			Capacity:      sdeType.Capacity,
-			PortionSize:   sdeType.PortionSize,
-			RaceID:        models.Int64Ptr(sdeType.RaceID),
-			BasePrice:     sdeType.BasePrice,
-			Published:     sdeType.Published,
-			MarketGroupID: models.Int64Ptr(sdeType.MarketGroupID),
-			IconID:        models.Int64Ptr(sdeType.IconID),
-			SoundID:       models.Int64Ptr(sdeType.SoundID),
-			GraphicID:     models.Int64Ptr(sdeType.GraphicID),
+			TypeID:   typeID,
+			GroupID:  sdeType.GroupID,
+			TypeName: sdeType.Name["en"],
+			Mass:     sdeType.Mass,
+			Volume:   sdeType.Volume,
+			Capacity: sdeType.Capacity,
 		}
 		result = append(result, invType)
 	}
@@ -196,21 +201,21 @@ func (t *Transformer) transformTypes(types map[int64]models.SDEType) []models.In
 	return result
 }
 
-// transformGroups converts SDE groups to InvGroup format.
-func (t *Transformer) transformGroups(groups map[int64]models.SDEGroup) []models.InvGroup {
-	result := make([]models.InvGroup, 0, len(groups))
+// transformShipGroups converts SDE groups to InvGroup format, filtering to ships only.
+// Ships are groups with categoryID == 6.
+func (t *Transformer) transformShipGroups(groups map[int64]models.SDEGroup) []models.InvGroup {
+	result := make([]models.InvGroup, 0)
 
 	for groupID, sdeGroup := range groups {
+		// Only include ship groups (category 6)
+		if sdeGroup.CategoryID != ShipCategoryID {
+			continue
+		}
+
 		invGroup := models.InvGroup{
-			GroupID:              groupID,
-			CategoryID:           sdeGroup.CategoryID,
-			GroupName:            sdeGroup.Name["en"],
-			IconID:               models.Int64Ptr(sdeGroup.IconID),
-			UseBasePrice:         sdeGroup.UseBasePrice,
-			Anchored:             sdeGroup.Anchored,
-			Anchorable:           sdeGroup.Anchorable,
-			FittableNonSingleton: sdeGroup.FittableNonSingleton,
-			Published:            sdeGroup.Published,
+			GroupID:    groupID,
+			CategoryID: sdeGroup.CategoryID,
+			GroupName:  sdeGroup.Name["en"],
 		}
 		result = append(result, invGroup)
 	}
@@ -282,7 +287,8 @@ func (t *Transformer) Validate(data *models.ConvertedData) *models.ValidationRes
 		minSolarSystems    = 8000
 		minRegions         = 100
 		minConstellations  = 1000
-		minTypes           = 30000 // All types, not just ships
+		minShipTypes       = 500   // Ships only (category 6), expected ~700+
+		minShipGroups      = 30    // Ship groups only (category 6), expected ~50+
 		minSystemJumps     = 13000 // Bidirectional jumps (A→B and B→A), expected ~13,776
 		minWormholeClasses = 750   // Regions + constellations + systems, expected ~803
 	)
@@ -306,10 +312,16 @@ func (t *Transformer) Validate(data *models.ConvertedData) *models.ValidationRes
 				result.Constellations, minConstellations))
 	}
 
-	if result.InvTypes < minTypes {
+	if result.InvTypes < minShipTypes {
 		result.Warnings = append(result.Warnings,
-			fmt.Sprintf("Type count (%d) is below expected minimum (%d)",
-				result.InvTypes, minTypes))
+			fmt.Sprintf("Ship type count (%d) is below expected minimum (%d)",
+				result.InvTypes, minShipTypes))
+	}
+
+	if result.InvGroups < minShipGroups {
+		result.Warnings = append(result.Warnings,
+			fmt.Sprintf("Ship group count (%d) is below expected minimum (%d)",
+				result.InvGroups, minShipGroups))
 	}
 
 	if result.SystemJumps < minSystemJumps {
