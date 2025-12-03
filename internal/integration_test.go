@@ -360,16 +360,16 @@ func TestIntegration_FullPipeline(t *testing.T) {
 
 	// Verify transformation results
 	t.Run("transformation", func(t *testing.T) {
-		// Should include all types (not filtered to ships anymore)
-		// Test data has 7 types total
-		if len(convertedData.InvTypes) != 7 {
-			t.Errorf("Expected 7 types, got %d", len(convertedData.InvTypes))
+		// Should include only ship types (groupID in ship groups with categoryID 6)
+		// Test data has 6 ship types (types with groupID 25, 26, or 419)
+		if len(convertedData.InvTypes) != 6 {
+			t.Errorf("Expected 6 ship types, got %d", len(convertedData.InvTypes))
 		}
 
-		// Should include all groups (not filtered to ships anymore)
-		// Test data has 5 groups total
-		if len(convertedData.InvGroups) != 5 {
-			t.Errorf("Expected 5 groups, got %d", len(convertedData.InvGroups))
+		// Should include only ship groups (categoryID 6)
+		// Test data has 4 ship groups (25, 26, 419, 999)
+		if len(convertedData.InvGroups) != 4 {
+			t.Errorf("Expected 4 ship groups, got %d", len(convertedData.InvGroups))
 		}
 
 		// Should extract wormhole classes (2 wormhole systems)
@@ -748,26 +748,19 @@ func TestIntegration_CSVFuzzworkFormat(t *testing.T) {
 		t.Fatalf("WriteAll failed: %v", err)
 	}
 
-	// Test each CSV file for Fuzzwork format compliance
+	// Test each CSV file for Wanderer format compliance
 	t.Run("mapSolarSystems.csv", func(t *testing.T) {
 		validateCSVHeaders(t, outputDir, writer.CSVFileSolarSystems, "mapSolarSystems")
 		validateCSVRowCount(t, outputDir, writer.CSVFileSolarSystems, len(convertedData.Universe.SolarSystems))
 
 		// Validate specific row content
+		// Slimmed headers: solarSystemID(0), solarSystemName(1), regionID(2), constellationID(3), security(4), sunTypeID(5)
 		records := readCSVFile(t, outputDir, writer.CSVFileSolarSystems)
 		if len(records) > 1 {
 			row := records[1] // First data row
-			// Check boolean formatting (should be "0" or "1")
-			validateBooleanColumn(t, "border", row[14])
-			validateBooleanColumn(t, "fringe", row[15])
-			validateBooleanColumn(t, "corridor", row[16])
-			validateBooleanColumn(t, "hub", row[17])
-			validateBooleanColumn(t, "international", row[18])
-			validateBooleanColumn(t, "regional", row[19])
-
-			// Check constellation is "None"
-			if row[20] != "None" {
-				t.Errorf("constellation should be 'None', got '%s'", row[20])
+			// Check that we have the expected number of columns
+			if len(row) != 6 {
+				t.Errorf("expected 6 columns, got %d", len(row))
 			}
 		}
 	})
@@ -786,11 +779,13 @@ func TestIntegration_CSVFuzzworkFormat(t *testing.T) {
 		validateCSVHeaders(t, outputDir, writer.CSVFileTypes, "invTypes")
 		validateCSVRowCount(t, outputDir, writer.CSVFileTypes, len(convertedData.InvTypes))
 
-		// Validate published field formatting
+		// Slimmed headers: typeID(0), groupID(1), typeName(2), mass(3), volume(4), capacity(5)
 		records := readCSVFile(t, outputDir, writer.CSVFileTypes)
 		if len(records) > 1 {
 			row := records[1]
-			validateBooleanColumn(t, "published", row[10])
+			if len(row) != 6 {
+				t.Errorf("expected 6 columns, got %d", len(row))
+			}
 		}
 	})
 
@@ -798,15 +793,13 @@ func TestIntegration_CSVFuzzworkFormat(t *testing.T) {
 		validateCSVHeaders(t, outputDir, writer.CSVFileGroups, "invGroups")
 		validateCSVRowCount(t, outputDir, writer.CSVFileGroups, len(convertedData.InvGroups))
 
-		// Validate boolean formatting
+		// Slimmed headers: groupID(0), categoryID(1), groupName(2)
 		records := readCSVFile(t, outputDir, writer.CSVFileGroups)
 		if len(records) > 1 {
 			row := records[1]
-			validateBooleanColumn(t, "useBasePrice", row[4])
-			validateBooleanColumn(t, "anchored", row[5])
-			validateBooleanColumn(t, "anchorable", row[6])
-			validateBooleanColumn(t, "fittableNonSingleton", row[7])
-			validateBooleanColumn(t, "published", row[8])
+			if len(row) != 3 {
+				t.Errorf("expected 3 columns, got %d", len(row))
+			}
 		}
 	})
 
@@ -877,16 +870,10 @@ func TestIntegration_CSVNullHandling(t *testing.T) {
 			if i == 0 {
 				continue // Skip header
 			}
-			// factionID (index 22) and sunTypeID (index 24) can be "None"
-			factionID := row[22]
-			sunTypeID := row[24]
+			// sunTypeID (index 5) can be "None" in the slimmed format
+			sunTypeID := row[5]
 
 			// If the value is not "None", it should be a valid integer
-			if factionID != "None" {
-				if _, err := strconv.ParseInt(factionID, 10, 64); err != nil {
-					t.Errorf("row %d: factionID should be 'None' or integer, got '%s'", i, factionID)
-				}
-			}
 			if sunTypeID != "None" {
 				if _, err := strconv.ParseInt(sunTypeID, 10, 64); err != nil {
 					t.Errorf("row %d: sunTypeID should be 'None' or integer, got '%s'", i, sunTypeID)
@@ -895,21 +882,16 @@ func TestIntegration_CSVNullHandling(t *testing.T) {
 		}
 	})
 
-	t.Run("type nullable fields", func(t *testing.T) {
+	t.Run("type fields", func(t *testing.T) {
 		records := readCSVFile(t, outputDir, writer.CSVFileTypes)
 		for i, row := range records {
 			if i == 0 {
 				continue // Skip header
 			}
-			// raceID (8), marketGroupID (11), iconID (12), soundID (13), graphicID (14) can be None
-			nullableIndices := []int{8, 11, 12, 13, 14}
-			for _, idx := range nullableIndices {
-				val := row[idx]
-				if val != "None" {
-					if _, err := strconv.ParseInt(val, 10, 64); err != nil {
-						t.Errorf("row %d, col %d: should be 'None' or integer, got '%s'", i, idx, val)
-					}
-				}
+			// Slimmed format has no nullable fields - all are required:
+			// typeID(0), groupID(1), typeName(2), mass(3), volume(4), capacity(5)
+			if len(row) != 6 {
+				t.Errorf("row %d: expected 6 columns, got %d", i, len(row))
 			}
 		}
 	})
@@ -1036,12 +1018,5 @@ func validateCSVRowCount(t *testing.T, dir, filename string, expectedDataRows in
 	expectedTotal := expectedDataRows + 1
 	if len(records) != expectedTotal {
 		t.Errorf("file %s: expected %d rows (including header), got %d", filename, expectedTotal, len(records))
-	}
-}
-
-func validateBooleanColumn(t *testing.T, colName, value string) {
-	t.Helper()
-	if value != "0" && value != "1" {
-		t.Errorf("column %s should be '0' or '1', got '%s'", colName, value)
 	}
 }

@@ -51,3 +51,5 @@ Claude.md
 
 # Build output (file only, not directories)
 /sdeconvert
+
+test_output/
