@@ -103,14 +103,14 @@ func TestTransformer_Transform(t *testing.T) {
 		}
 	}
 
-	// Check types (all types, not just ships)
-	if len(result.InvTypes) != 3 {
-		t.Errorf("Expected 3 types (all types), got %d", len(result.InvTypes))
+	// Check types (ships only - groupID 25 has categoryID 6)
+	if len(result.InvTypes) != 2 {
+		t.Errorf("Expected 2 ship types, got %d", len(result.InvTypes))
 	}
 
-	// Check groups (all groups)
-	if len(result.InvGroups) != 2 {
-		t.Errorf("Expected 2 groups, got %d", len(result.InvGroups))
+	// Check groups (ships only - categoryID 6)
+	if len(result.InvGroups) != 1 {
+		t.Errorf("Expected 1 ship group, got %d", len(result.InvGroups))
 	}
 
 	// Check wormhole classes

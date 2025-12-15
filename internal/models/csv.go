@@ -5,40 +5,30 @@ import (
 	"strconv"
 )
 
-// CSVHeaders defines the exact column headers for each CSV file to match Fuzzwork format.
+// CSVHeaders defines the exact column headers for each CSV file.
+// These are slimmed down to only the fields that Wanderer actually uses.
 var CSVHeaders = map[string][]string{
 	"mapSolarSystems": {
-		"regionID", "constellationID", "solarSystemID", "solarSystemName",
-		"x", "y", "z", "xMin", "xMax", "yMin", "yMax", "zMin", "zMax",
-		"luminosity", "border", "fringe", "corridor", "hub", "international",
-		"regional", "constellation", "security", "factionID", "radius",
-		"sunTypeID", "securityClass",
+		"solarSystemID", "solarSystemName", "regionID", "constellationID",
+		"security", "sunTypeID",
 	},
 	"mapRegions": {
-		"regionID", "regionName", "x", "y", "z",
-		"xMin", "xMax", "yMin", "yMax", "zMin", "zMax",
-		"factionID", "nebula", "radius",
+		"regionID", "regionName",
 	},
 	"mapConstellations": {
-		"regionID", "constellationID", "constellationName",
-		"x", "y", "z", "xMin", "xMax", "yMin", "yMax", "zMin", "zMax",
-		"factionID", "radius",
+		"constellationID", "constellationName",
 	},
 	"invTypes": {
-		"typeID", "groupID", "typeName", "description",
-		"mass", "volume", "capacity", "portionSize", "raceID",
-		"basePrice", "published", "marketGroupID", "iconID", "soundID", "graphicID",
+		"typeID", "groupID", "typeName", "mass", "volume", "capacity",
 	},
 	"invGroups": {
-		"groupID", "categoryID", "groupName", "iconID",
-		"useBasePrice", "anchored", "anchorable", "fittableNonSingleton", "published",
+		"groupID", "categoryID", "groupName",
 	},
 	"mapLocationWormholeClasses": {
 		"locationID", "wormholeClassID",
 	},
 	"mapSolarSystemJumps": {
-		"fromRegionID", "fromConstellationID", "fromSolarSystemID",
-		"toSolarSystemID", "toConstellationID", "toRegionID",
+		"fromSolarSystemID", "toSolarSystemID",
 	},
 }
 
@@ -86,115 +76,56 @@ func Int64PtrAlways(v int64) *int64 {
 	return &v
 }
 
-// ToCSVRow converts a SolarSystem to a CSV row matching Fuzzwork format.
+// ToCSVRow converts a SolarSystem to a CSV row with only fields Wanderer uses.
 func (s *SolarSystem) ToCSVRow() []string {
 	return []string{
-		strconv.FormatInt(s.RegionID, 10),
-		strconv.FormatInt(s.ConstellationID, 10),
 		strconv.FormatInt(s.SolarSystemID, 10),
 		s.SolarSystemName,
-		FormatFloat(s.X),
-		FormatFloat(s.Y),
-		FormatFloat(s.Z),
-		FormatFloat(s.XMin),
-		FormatFloat(s.XMax),
-		FormatFloat(s.YMin),
-		FormatFloat(s.YMax),
-		FormatFloat(s.ZMin),
-		FormatFloat(s.ZMax),
-		FormatFloat(s.Luminosity),
-		FormatBool(s.Border),
-		FormatBool(s.Fringe),
-		FormatBool(s.Corridor),
-		FormatBool(s.Hub),
-		FormatBool(s.International),
-		FormatBool(s.Regional),
-		s.Constellation, // Always "None"
+		strconv.FormatInt(s.RegionID, 10),
+		strconv.FormatInt(s.ConstellationID, 10),
 		FormatSecurity(s.Security),
-		FormatNullableInt64(s.FactionID),
-		FormatFloat(s.Radius),
 		FormatNullableInt64(s.SunTypeID),
-		s.SecurityClass,
 	}
 }
 
-// ToCSVRow converts a Region to a CSV row matching Fuzzwork format.
+// ToCSVRow converts a Region to a CSV row with only fields Wanderer uses.
 func (r *Region) ToCSVRow() []string {
 	return []string{
 		strconv.FormatInt(r.RegionID, 10),
 		r.RegionName,
-		FormatFloat(r.X),
-		FormatFloat(r.Y),
-		FormatFloat(r.Z),
-		FormatFloat(r.XMin),
-		FormatFloat(r.XMax),
-		FormatFloat(r.YMin),
-		FormatFloat(r.YMax),
-		FormatFloat(r.ZMin),
-		FormatFloat(r.ZMax),
-		FormatNullableInt64(r.FactionID),
-		strconv.FormatInt(r.Nebula, 10),
-		FormatFloat(r.Radius),
 	}
 }
 
-// ToCSVRow converts a Constellation to a CSV row matching Fuzzwork format.
+// ToCSVRow converts a Constellation to a CSV row with only fields Wanderer uses.
 func (c *Constellation) ToCSVRow() []string {
 	return []string{
-		strconv.FormatInt(c.RegionID, 10),
 		strconv.FormatInt(c.ConstellationID, 10),
 		c.ConstellationName,
-		FormatFloat(c.X),
-		FormatFloat(c.Y),
-		FormatFloat(c.Z),
-		FormatFloat(c.XMin),
-		FormatFloat(c.XMax),
-		FormatFloat(c.YMin),
-		FormatFloat(c.YMax),
-		FormatFloat(c.ZMin),
-		FormatFloat(c.ZMax),
-		FormatNullableInt64(c.FactionID),
-		FormatFloat(c.Radius),
 	}
 }
 
-// ToCSVRow converts an InvType to a CSV row matching Fuzzwork format.
+// ToCSVRow converts an InvType to a CSV row with only fields Wanderer uses.
 func (t *InvType) ToCSVRow() []string {
 	return []string{
 		strconv.FormatInt(t.TypeID, 10),
 		strconv.FormatInt(t.GroupID, 10),
 		t.TypeName,
-		t.Description,
 		FormatFloat(t.Mass),
 		FormatFloat(t.Volume),
 		FormatFloat(t.Capacity),
-		strconv.FormatInt(t.PortionSize, 10),
-		FormatNullableInt64(t.RaceID),
-		FormatFloat(t.BasePrice),
-		FormatBool(t.Published),
-		FormatNullableInt64(t.MarketGroupID),
-		FormatNullableInt64(t.IconID),
-		FormatNullableInt64(t.SoundID),
-		FormatNullableInt64(t.GraphicID),
 	}
 }
 
-// ToCSVRow converts an InvGroup to a CSV row matching Fuzzwork format.
+// ToCSVRow converts an InvGroup to a CSV row with only fields Wanderer uses.
 func (g *InvGroup) ToCSVRow() []string {
 	return []string{
 		strconv.FormatInt(g.GroupID, 10),
 		strconv.FormatInt(g.CategoryID, 10),
 		g.GroupName,
-		FormatNullableInt64(g.IconID),
-		FormatBool(g.UseBasePrice),
-		FormatBool(g.Anchored),
-		FormatBool(g.Anchorable),
-		FormatBool(g.FittableNonSingleton),
-		FormatBool(g.Published),
 	}
 }
 
-// ToCSVRow converts a WormholeClassLocation to a CSV row matching Fuzzwork format.
+// ToCSVRow converts a WormholeClassLocation to a CSV row.
 func (w *WormholeClassLocation) ToCSVRow() []string {
 	return []string{
 		strconv.FormatInt(w.LocationID, 10),
@@ -202,14 +133,10 @@ func (w *WormholeClassLocation) ToCSVRow() []string {
 	}
 }
 
-// ToCSVRow converts a SystemJump to a CSV row matching Fuzzwork format.
+// ToCSVRow converts a SystemJump to a CSV row with only fields Wanderer uses.
 func (j *SystemJump) ToCSVRow() []string {
 	return []string{
-		strconv.FormatInt(j.FromRegionID, 10),
-		strconv.FormatInt(j.FromConstellationID, 10),
 		strconv.FormatInt(j.FromSolarSystemID, 10),
 		strconv.FormatInt(j.ToSolarSystemID, 10),
-		strconv.FormatInt(j.ToConstellationID, 10),
-		strconv.FormatInt(j.ToRegionID, 10),
 	}
 }
